@@ -1,0 +1,3 @@
+#pragma once
+
+#define DEVPROMPT_VERSION "@DEVPROMPT_VERSION@"
