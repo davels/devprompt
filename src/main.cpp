@@ -113,8 +113,11 @@ template<typename F>
 void maybe_timed(std::string_view name, F&& f)
 {
     if (!s_timing_on)
+    {
         std::ignore = std::forward<F>(f)();
-
+        return;
+    }
+    
     const auto start = std::chrono::steady_clock::now();
 
     if (std::forward<F>(f)())
