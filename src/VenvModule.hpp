@@ -7,11 +7,13 @@
 #include <string>
 
 namespace devprompt
-{
-struct Options;
-}
+{ struct Options; }
 
 namespace devprompt::VenvModule
 {
-std::string format(const Options& options);
+
+bool load(const Options& options);
+
+void name(std::string& out);
+
 }

@@ -7,16 +7,26 @@
 #include <string>
 #include <string_view>
 #include "Options.hpp"
-#include "AnsiColor.hpp"
+#include "Variable.hpp"
 
 namespace devprompt::VenvModule
 {
 
-std::string format(const Options& options)
+namespace
 {
+std::string s_name;
+} // namespace
+
+
+/// Load module data
+bool load(const Options& options)
+{
+    if (!IsVariableInUse(VariableId::venv_name))
+        return false;
+
     const char* env = std::getenv("VIRTUAL_ENV");
     if (!env || *env == '\0')
-        return {};
+        return true;
 
     std::string_view path{env};
 
@@ -41,12 +51,18 @@ std::string format(const Options& options)
         }
     }
 
-    std::string out;
-    ansi::append_style(options.Venv.style, options.output, out);
-    out += options.Venv.icon;
-    //out += "\ued1b-";
-    out += label;
-    return out;
+    s_name = label;
+    return true;
+}
+
+
+//
+// Variable functions
+//
+
+void name(std::string& out)
+{
+    out += s_name;
 }
 
 } // namespace devprompt::VenvModule

@@ -127,15 +127,20 @@ FetchContent_MakeAvailable(Catch2)
 # --------------------------------------------------------------------
 
 add_library(devprompt_lib
-  src/AnsiColor.cpp
-  src/GitBackend.cpp
-  src/Options.cpp
-  src/ShellCommand.cpp
-  src/SvnBackend.cpp
-  src/VcsFormatter.cpp
-  src/VcsModule.cpp
-  src/VenvModule.cpp
-  src/filesystem.cpp
+    src/AnsiColor.cpp
+    src/Options.cpp
+    src/ShellCommand.cpp
+    src/filesystem.cpp
+    src/FormatString.cpp
+    src/Variable.cpp
+    src/VcsModule.cpp
+    src/VenvModule.cpp
+    src/SysModule.cpp
+    src/PathModule.cpp
+    src/OsModule.cpp
+    src/ShellModule.cpp
+    src/GitBackend.cpp
+    src/SvnBackend.cpp
 )
 
 target_include_directories(devprompt_lib PRIVATE
@@ -209,10 +214,11 @@ include(CTest)
 include(Catch)
 
 add_executable(devprompt_tests
-  tests/Expected.cpp
-  tests/formatter.cpp
-  tests/AnsiColor.cpp
-  tests/ShellCommand.cpp
+    tests/Expected.cpp
+    #  tests/formatter.cpp
+    tests/AnsiColor.cpp
+    tests/ShellCommand.cpp
+    tests/FormatString.cpp
 )
 
 target_link_libraries(devprompt_tests PRIVATE

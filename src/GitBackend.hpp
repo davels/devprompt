@@ -17,7 +17,7 @@ namespace devprompt::VcsModule
 class GitBackend
 {
   public:
-    RepoQueryResult query(const Options& opts);
+    RepoQueryResult query(const Options& options, const RepoQueryVars& vars);
 };
 
 } // namespace devprompt::VcsModule

@@ -25,9 +25,19 @@ struct RepoStatus
     int ahead       = 0;      // local is ahead of upstream
     int behind      = 0;      // local is behind upstream
 
-    // MERGE / REBASE / CHERRY_PICK / etc, empty if repo is in a normal state.
-    std::string op_in_progress;
-    std::string host_icon;    // icon for the 'remote' host
+    
+    std::string state;        // MERGE / REBASE / CHERRY_PICK / etc, empty if normal
+    std::string remote_icon;  // icon for the 'remote' host
+};
+
+struct RepoQueryVars
+{
+    bool remote_icon = false;
+    bool branch      = false;
+    bool state       = false;
+    bool wt_icon     = false;
+    bool status      = false;
+    bool divergence  = false;
 };
 
 enum class RepoError

@@ -38,7 +38,7 @@ std::string git_host_icon(std::string_view url, const Options& options)
 {
     auto it = std::ranges::find_if(options.Vcs.remoteicon_mapping,
                                    [url](const auto& item) {
-                                       return url.find(item.hostname) != std::string::npos;
+                                       return url.find(item.pattern) != std::string::npos;
                                    });
     if (it != options.Vcs.remoteicon_mapping.end())
     {
@@ -53,7 +53,7 @@ std::string git_host_icon(std::string_view url, const Options& options)
     return std::string{};
 }
 
-Expected<RepoStatus,int> git_status_cmd(const Options& options)
+Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryVars& vars)
 {
     // defaults for: git status --porcelain=2
     //   untracked file mode on =  -unormal
@@ -96,7 +96,7 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options)
         args.push_back("--ignore-submodules=dirty");
     // else
     //     args.push_back(("--ignore-submodules="))
-    if (!options.Vcs.show_status)
+    if (!vars.status)
     {
         // this must be the last argument. it will limit git status to this single file
         // and effectively skip file status scanning
@@ -108,7 +108,7 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options)
     if (!cmd.start(args.span()))
         return Unexpected(1);
 
-    std::string head_hash;
+    std::string branch_head_hash;
     std::string remote_alias;
     while (auto line = cmd.readline(buffer, linebuf))
     {
@@ -119,7 +119,7 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options)
         {
             std::string_view str{line->data(), line->size()};
             //# Branch name
-            if (str.starts_with("# branch.head "))
+            if (vars.branch && str.starts_with("# branch.head "))
             {
                 str.remove_prefix(14);
                 if (str == "(detatched)")
@@ -127,15 +127,14 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options)
                 else
                     status.branch = str;
             }
-            else if (str.starts_with("# branch.oid"))
+            else if (vars.branch && str.starts_with("# branch.oid"))
             {
                 str.remove_prefix(13);
                 if (str.length() >= 7)
-                    head_hash = std::string{str.substr(0,7)};
+                    branch_head_hash = std::string{str.substr(0,7)};
             }
             //# Upsteam url
-            else if (options.Vcs.show_remote_icon &&
-                     str.starts_with("# branch.upstream "))
+            else if (vars.remote_icon && str.starts_with("# branch.upstream "))
             {
                 str.remove_prefix(18);
                 //auto upstream_name = std::string{str};
@@ -148,7 +147,7 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options)
                 }
             }            
             //# Ahead/Behind
-            else if (str.starts_with("# branch.ab"))
+            else if (vars.divergence && str.starts_with("# branch.ab"))
             {
                 str.remove_prefix(12);
                 // str is now "+A -B"
@@ -200,25 +199,25 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options)
         }
     } 
     // if detached then set branch to the commit hash
-    if (status.detached)
+    if (status.detached && options.Vcs.commit_as_branch)
     {
-        if (head_hash.empty())
+        if (branch_head_hash.empty())
             status.branch = "(detached)";
         else
-            status.branch = head_hash;
+            status.branch = branch_head_hash;
     }
     if (auto ret = cmd.wait() != 0)
         return Unexpected(ret);
 
     // host icon based on url of remote 
-    if (options.Vcs.show_remote_icon && !remote_alias.empty())
+    if (vars.remote_icon && !remote_alias.empty())
     {
         auto remotearg = "remote." + std::string{remote_alias} + ".url";
         auto url = cmd.run(buffer,
                            "git", "config", "--get", remotearg.c_str());
         if (url)
         {
-            status.host_icon = git_host_icon(*url, options);
+            status.remote_icon = git_host_icon(*url, options);
         }
     }
 
@@ -271,7 +270,7 @@ std::string determine_repo_state(const std::string& gitdir)
 } // namespace
 
 
-RepoQueryResult GitBackend::query(const Options& options)
+RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& vars)
 {
     std::array<char, 4096> buffer{};
     std::string gitdir;
@@ -281,7 +280,7 @@ RepoQueryResult GitBackend::query(const Options& options)
     const std::string work_path = options.path.empty() ? "." : options.path;
 
     // need the git repo directory for some operations
-    if (options.Vcs.show_state || options.Vcs.show_worktree_icon)
+    if (vars.state || vars.wt_icon)
     {   
         auto dir = cmd.run(buffer, "git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-dir");
         if (!dir || dir->empty())
@@ -290,20 +289,20 @@ RepoQueryResult GitBackend::query(const Options& options)
     }
 
     // repo status: branch, status counts, remote icon
-    auto status = git_status_cmd(options);
+    auto status = git_status_cmd(options, vars);
     if (!status)
         return Unexpected(RepoError::NotRepository);
 
     // current operation
-    if (options.Vcs.show_state)
+    if (vars.state)
     {
         auto state = determine_repo_state(gitdir);
         if (!state.empty())
-            status->op_in_progress = state;
+            status->state = state;
     }
 
     // worktree test
-    if (options.Vcs.show_worktree_icon)
+    if (vars.wt_icon)
     {
         auto dir = cmd.run(buffer, "git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-common-dir");
         if (dir && !dir->empty() && *dir != gitdir)

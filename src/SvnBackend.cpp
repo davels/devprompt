@@ -14,63 +14,30 @@
 namespace devprompt::VcsModule
 {
 
-namespace
-{
-
-Expected<std::string, int> run_command(const std::string& command)
-{
-    std::array<char, 4096> buffer{};
-    std::string result;
-
-    // direct stderr to stdout
-    const std::string cmd = command + " 2>&1";
-
-#ifdef _WIN32
-    FILE* pipe = _popen(cmd.c_str(), "r");
-#else
-    FILE* pipe = popen(cmd.c_str(), "r");
-#endif
-
-    if (!pipe)
-        return Unexpected(1);
-    while (fgets(buffer.data(), buffer.size(), pipe))
-        result += buffer.data();
-
-#ifdef _WIN32
-    const int status = _pclose(pipe);
-#else
-    const int status = pclose(pipe);
-#endif
-
-    if (status != 0)
-        return Unexpected(status);
-
-    return result;
-}
-
-} // namespace
-
-
-RepoQueryResult SvnBackend::query(const Options& opts)
+RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& vars)
 {
     // Default to cwd but allow an explicit path
-    const std::string start_path = opts.path.empty() ? "." : opts.path;
+    const std::string start_path = options.path.empty() ? "." : options.path;
 
     RepoStatus status;;
     std::array<char, 4096> buffer{};
 
-    // Get the working-copy revision.
     ShellCommand cmd;
-    auto revision = cmd.run(buffer,
-                            "svn", "info", "--show-item", "revision", "--non-interactive",
-                            start_path.c_str());
-    if (!revision)
-        return Unexpected(RepoError::NotRepository);
-    status.branch = utils::trimmed(*revision);
-    status.detached = true;
+    
+    // Get the working-copy revision.
+    if (vars.branch && options.Vcs.commit_as_branch)
+    {
+        auto revision = cmd.run(buffer,
+                                "svn", "info", "--show-item", "revision", "--non-interactive",
+                                start_path.c_str());
+        if (!revision)
+            return Unexpected(RepoError::NotRepository);
+        status.branch = utils::trimmed(*revision);
+        status.detached = true;
+    }
 
     // Get working-copy status.
-    if (opts.Vcs.show_status)
+    if (vars.status)
     {    
         if (!cmd.start("svn", "status", "-q", "--non-interactive", start_path.c_str()))
             return Unexpected(RepoError::Error);

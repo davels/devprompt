@@ -42,7 +42,9 @@ std::size_t ShellCommand::stderr(std::span<char> buffer)
     return std::fread(buffer.data(), 1, buffer.size(), pout);
 }
 
-std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer, std::span<char> linebuf)
+std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
+                                                      std::span<char> linebuf,
+                                                      bool ignore_overflow/*=false*/)
 {
     std::size_t line_size = 0;
 

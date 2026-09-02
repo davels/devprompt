@@ -268,7 +268,7 @@ TEST_CASE("parse_style recognizes each attribute keyword", "[parse_style][attrib
     CHECK(parse_style("blink")->str(Output::Raw) == "\033[5m");
     CHECK(parse_style("hidden")->str(Output::Raw) == "\033[8m");
     CHECK(parse_style("strikethrough")->str(Output::Raw) == "\033[9m");
-    CHECK(parse_style("none")->str(Output::Raw) == "\033[0m"); // "none" maps to Style::reset()
+    CHECK(parse_style("/")->str(Output::Raw) == "\033[0m"); // "/" maps to Style::reset()
 }
 
 TEST_CASE("parse_style combines multiple attribute words in the given order",
@@ -331,7 +331,7 @@ TEST_CASE("parse_style resolves every named foreground color", "[parse_style][co
     CHECK(parse_style("fg:green")->str(Output::Raw) == "\033[32m");
     CHECK(parse_style("fg:yellow")->str(Output::Raw) == "\033[33m");
     CHECK(parse_style("fg:blue")->str(Output::Raw) == "\033[34m");
-    CHECK(parse_style("fg:purple")->str(Output::Raw) == "\033[35m");
+    CHECK(parse_style("fg:magenta")->str(Output::Raw) == "\033[35m");
     CHECK(parse_style("fg:cyan")->str(Output::Raw) == "\033[36m");
     CHECK(parse_style("fg:white")->str(Output::Raw) == "\033[37m");
     CHECK(parse_style("fg:bright-black")->str(Output::Raw) == "\033[90m");
@@ -339,7 +339,7 @@ TEST_CASE("parse_style resolves every named foreground color", "[parse_style][co
     CHECK(parse_style("fg:bright-green")->str(Output::Raw) == "\033[92m");
     CHECK(parse_style("fg:bright-yellow")->str(Output::Raw) == "\033[93m");
     CHECK(parse_style("fg:bright-blue")->str(Output::Raw) == "\033[94m");
-    CHECK(parse_style("fg:bright-purple")->str(Output::Raw) == "\033[95m");
+    CHECK(parse_style("fg:bright-magenta")->str(Output::Raw) == "\033[95m");
     CHECK(parse_style("fg:bright-cyan")->str(Output::Raw) == "\033[96m");
     CHECK(parse_style("fg:bright-white")->str(Output::Raw) == "\033[97m");
 }

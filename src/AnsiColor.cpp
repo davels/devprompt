@@ -22,7 +22,7 @@ constexpr int ansi_color(std::string_view color)
     if (color == "green")          return 32;
     if (color == "yellow")         return 33;
     if (color == "blue")           return 34;
-    if (color == "purple")         return 35;
+    if (color == "magenta")        return 35;
     if (color == "cyan")           return 36;
     if (color == "white")          return 37;
 
@@ -31,7 +31,7 @@ constexpr int ansi_color(std::string_view color)
     if (color == "bright-green")   return 92;
     if (color == "bright-yellow")  return 93;
     if (color == "bright-blue")    return 94;
-    if (color == "bright-purple")  return 95;
+    if (color == "bright-magenta") return 95;
     if (color == "bright-cyan")    return 96;
     if (color == "bright-white")   return 97;
 
@@ -45,6 +45,13 @@ Expected<Style,std::string> parse_style(std::string_view stylestr)
     Style style;
     constexpr std::string_view WHITESPACE = " \t\n\r\f\v";
     std::size_t pos = 0;
+
+    // short-circuit a common case, reset tag
+    if (stylestr == "/")
+    {
+        style.reset();
+        return style;
+    }
     
     while (true)
     {
@@ -59,31 +66,7 @@ Expected<Style,std::string> parse_style(std::string_view stylestr)
                                           end == std::string_view::npos
                                           ? std::string_view::npos
                                           : end - pos);
-        if (decl == "bold") {
-            style.bold();
-        }
-        else if (decl == "italic") {
-            style.italic();
-        }
-        else if (decl == "underline") {
-            style.underline();
-        }
-        // else if (decl == "dimmed") {
-        //     style.dimmed();
-        // }
-        // else if (decl == "inverted") {
-        //     style.inverted();
-        // }
-        else if (decl == "blink") {
-            style.blink();
-        }
-        else if (decl == "hidden") {
-            style.hidden();
-        }
-        else if (decl == "strikethrough") {
-            style.strikethrough();
-        }
-        else if (decl == "none") {
+        if (decl == "/") {
             style.reset();
         }        
         else if (decl.starts_with("fg:"))
@@ -120,6 +103,30 @@ Expected<Style,std::string> parse_style(std::string_view stylestr)
                 }
                 style.bg(static_cast<ansi::Color>(ansi));
             }
+        }
+        else if (decl == "bold") {
+            style.bold();
+        }
+        else if (decl == "italic") {
+            style.italic();
+        }
+        else if (decl == "underline") {
+            style.underline();
+        }
+        // else if (decl == "dimmed") {
+        //     style.dimmed();
+        // }
+        // else if (decl == "inverted") {
+        //     style.inverted();
+        // }
+        else if (decl == "blink") {
+            style.blink();
+        }
+        else if (decl == "hidden") {
+            style.hidden();
+        }
+        else if (decl == "strikethrough") {
+            style.strikethrough();
         }
         else
         {

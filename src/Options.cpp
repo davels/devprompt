@@ -3,6 +3,7 @@
  */
 
 #include "Options.hpp"
+#include <cstdlib>
 #include <string>
 #include <string_view>
 #include <optional>
@@ -56,7 +57,8 @@ std::string lowerstyle(std::string_view style)
 Expected<Options, std::string> parse_options(int argc,  char** argv)
 {
     Options options;
-
+    bool have_format = false;
+    
     ArgParser parser(argc, argv);
     while (auto parg = parser.next())
     {
@@ -68,7 +70,14 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
             break;
         }
 
-        if (arg == "--bash")
+        if (arg == "--format")
+        {
+            if (!parser.more())
+                return Unexpected("Missing format string");
+            options.format = *parser.next();
+            have_format = true;
+        }
+        else if (arg == "--bash")
         {
             options.output = ansi::Output::Bash;
         }
@@ -84,21 +93,13 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         {
             options.Vcs.svn = true;;
         }
-        else if (arg == "--vcs-branch")
+        else if (arg == "--vcs-counts")
         {
-            options.Vcs.show_branch = true;
+            options.Vcs.show_counts = true;
         }
-        else if (arg == "--vcs-no-branch")
+        else if (arg == "--vcs-no-counts")
         {
-            options.Vcs.show_branch = false;
-        }
-        else if (arg == "--vcs-status")
-        {
-            options.Vcs.show_status = true;
-        }
-        else if (arg == "--vcs-no-status")
-        {
-            options.Vcs.show_status = false;
+            options.Vcs.show_counts = false;
         }
         else if (arg == "--vcs-untracked")
         {
@@ -108,14 +109,6 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         {
             options.Vcs.show_untracked = false;
         }
-        else if (arg == "--vcs-diverged")
-        {
-            options.Vcs.show_diverged = true;
-        }
-        else if (arg == "--vcs-no-diverged")
-        {
-            options.Vcs.show_diverged = false;
-        }
         else if (arg == "--vcs-stashed")
         {
             options.Vcs.show_stashed = true;
@@ -124,73 +117,42 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         {
             options.Vcs.show_stashed = false;
         }
-        else if (arg == "--vcs-counts")
+        else if (arg == "--vcs-commit-as-branch")
         {
-            options.Vcs.show_counts = true;
+            options.Vcs.commit_as_branch = true;
         }
-        else if (arg == "--vcs-no-counts")
+        else if (arg == "--vcs-no-commit-as-branch")
         {
-            options.Vcs.show_counts = false;
+            options.Vcs.commit_as_branch = false;
         }
-        else if (arg == "--vcs-state")
-        {
-            options.Vcs.show_state = true;
-        }
-        else if (arg == "--vcs-no-state")
-        {
-            options.Vcs.show_state = false;
-        }
-        else if (arg == "--vcs-show-remote-icon")
-        {
-            options.Vcs.show_remote_icon = true;
-        }
-        else if (arg == "--vcs-no-remote-icon")
-        {
-            options.Vcs.show_remote_icon = false;
-        }
-        else if (arg == "--vcs-remote-icon")
+        else if (arg == "--vcs-remote-pattern")
         {
             if (!parser.more())
-                return Unexpected("Missing value for --vcs-remote-icon");
+                return Unexpected("Missing value for --vcs-remote-pattern");
             auto iconinfo = *parser.next();
             auto pos = iconinfo.find(';');
             if (pos == std::string_view::npos)
-                return Unexpected("Invalid mapping for --vcs-remote-icon. Use 'pattern;icon'");
+                return Unexpected("Invalid mapping for --vcs-remote-pattern. Use 'pattern;icon'");
             options.Vcs.remoteicon_mapping.emplace_back(std::string{iconinfo.substr(0, pos)},
-                                                        std::string{iconinfo.substr(pos + 1)});
-            
+                                                        std::string{iconinfo.substr(pos + 1)});            
         }
-        else if (arg == "--vcs-show-worktree-icon")
+        else if (arg == "--os-wsl-is-distro")
         {
-            options.Vcs.show_worktree_icon = true;
+            options.Os.wsl_is_distro = true;
         }
-        else if (arg == "--vcs-no-worktree-icon")
+        else if (arg == "--os-no-wsl-is-distro")
         {
-            options.Vcs.show_worktree_icon = false;
+            options.Os.wsl_is_distro = false;
         }
-        else if (arg == "--vcs-icon")
-        {
-            if (!parser.more())
-                return Unexpected(std::string{"Missing value for --vcs-icon"});
-            options.Vcs.icon = *parser.next();
-        }
-        else if (arg == "--vcs-style")
+        else if (arg == "--shell-error")
         {
             if (!parser.more())
-                return Unexpected(std::string{"Missing value for --vcs-style"});
-            options.Vcs.style = lowerstyle(*parser.next());
-        }
-        else if (arg == "--venv-icon")
+                return Unexpected("Missing error value for --shell-error");
+            options.Shell.error = *parser.next();
+        }        
+        else if (arg == "--timing")
         {
-            if (!parser.more())
-                return Unexpected(std::string{"Missing value for --venv-icon"});
-            options.Venv.icon = *parser.next();
-        }
-        else if (arg == "--venv-style")
-        {
-            if (!parser.more())
-                return Unexpected(std::string{"Missing value for --venv-style"});
-            options.Venv.style = lowerstyle(*parser.next());
+            options.show_timing = true;
         }
         else if (arg == "--version")
         {
@@ -198,8 +160,6 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         }
         else if (arg == "-h" || arg == "--help")
         {
-            // Handle this however you want. Could also make this
-            // a flag in Options.
             options.show_help = true;
         }
         else
@@ -215,6 +175,14 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
     if (options.Vcs.git == false && options.Vcs.svn == false)
     {
         options.Vcs.git = options.Vcs.svn = true;
+    }
+
+    // if fotmat is not specified in args, check ENV
+    if (!have_format)
+    {
+        auto format_env = std::getenv("DEVPROMPT_FORMAT");
+        if (format_env)
+            options.format = format_env;
     }
     return options;
 }
