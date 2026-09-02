@@ -20,8 +20,7 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     const std::string start_path = options.path.empty() ? "." : options.path;
 
     RepoStatus status;;
-    std::array<char, 4096> buffer{};
-
+    std::array<char, 4096> buffer;
     ShellCommand cmd;
     
     // Get the working-copy revision.
@@ -39,38 +38,26 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     // Get working-copy status.
     if (vars.status)
     {    
+        std::array<char, 8> linebuf;
         if (!cmd.start("svn", "status", "-q", "--non-interactive", start_path.c_str()))
             return Unexpected(RepoError::Error);
-        
-        bool beginning_of_line = true;
-        while (const auto len = cmd.read(buffer) != 0)
+        while (auto line = cmd.readline(buffer, linebuf))
         {
-            const std::span<const char> data{buffer.data(), len};
-            for (char ch: data)
+            switch ((*line)[0])  // char in column 0
             {
-                if (beginning_of_line)
-                {
-                    switch (ch)
-                    {
-                    case 'M':
-                    case 'A':
-                    case 'D':
-                    case '!':
-                        ++status.unstaged;
-                        break;
-                    case 'C':
-                        ++status.conflicts;
-                        break;
-                    case '?':
-                        ++status.untracked;
-                        break;
-                    }
-                    beginning_of_line = false;
-                }
-
-                if (ch == '\n')
-                    beginning_of_line = true;
-            }   
+            case 'M':
+            case 'A':
+            case 'D':
+            case '!':
+                ++status.unstaged;
+                break;
+            case 'C':
+                ++status.conflicts;
+                break;
+            case '?':
+                ++status.untracked;
+                break;
+            }
         }
     }
     return status;
