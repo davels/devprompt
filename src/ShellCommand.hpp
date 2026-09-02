@@ -57,7 +57,7 @@ class ShellCommand
     // read from stdout - returns # chars read, 0 when nothing left
     std::size_t read(std::span<char> buffer);
 
-    // read one line from sdtout. any part of the line longer than linebuf it ignored
+    // read one line from stdout. any part of the line longer than linebuf it ignored
     std::optional<std::span<char>> readline(std::span<char> buffer,
                                             std::span<char> linebuf,
                                             bool ignore_overflow=false);

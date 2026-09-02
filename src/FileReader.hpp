@@ -10,6 +10,7 @@
 #include <array>
 
 
+/// Lightweight FILE wrapper for reading lines from a file
 class FileReader
 {
   public:

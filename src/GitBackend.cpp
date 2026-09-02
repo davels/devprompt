@@ -55,27 +55,8 @@ std::string git_host_icon(std::string_view url, const Options& options)
 
 Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryVars& vars)
 {
-    // defaults for: git status --porcelain=2
-    //   untracked file mode on =  -unormal
-    //   branch header disabled
-    //   stash header disabled
-    //   ignored files disabled
-    //   ignore submodules is off = --ignore-submodules=none
-
-    // default for --ignore-submodules is none (full scan all submodules)
-    // if !has_untracked 
-    //         args.push("--untracked-files=no");
-    // if config.ignore_submodules 
-    //        args.push("--ignore-submodules=dirty");
-    // else if !has_untracked 
-    //        args.push("--ignore-submodules=untracked");
-    // --show-stash
-    //
-    
     RepoStatus status;
-    std::array<char, 4096> buffer{};
-    std::array<char, 50> linebuf{};  // only care about the start of the lines
-
+    
     CommandArgs<12> args;
     args.push_back("git");
     if (!options.path.empty())
@@ -103,7 +84,9 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
         args.push_back("--");
         args.push_back(".zdummyz");
     }
-    
+
+    std::array<char, 4096> buffer;
+    std::array<char, 50> linebuf;  // only care about the start of the lines
     ShellCommand cmd;
     if (!cmd.start(args.span()))
         return Unexpected(1);
@@ -272,7 +255,7 @@ std::string determine_repo_state(const std::string& gitdir)
 
 RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& vars)
 {
-    std::array<char, 4096> buffer{};
+    std::array<char, 512> buffer;
     std::string gitdir;
     ShellCommand cmd;
 
