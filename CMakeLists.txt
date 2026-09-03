@@ -12,7 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 # --------------------------------------------------------------------
 
-# Prefer static binary for fast startup and no runtime dependancies on libgit2
+# Prefer static binary for fast startup and no runtime dependancies
 option(DEVPROMPT_STATIC_RUNTIME "Statically link the C++ runtime" ON)
 
 # default to debug build
@@ -46,6 +46,32 @@ if(ENABLE_SANITIZERS)
         -fsanitize=address,undefined
     )
 endif()
+
+
+# --------------------------------------------------------------------
+# Warnings
+# --------------------------------------------------------------------
+
+add_library(devprompt_warnings INTERFACE)
+
+target_compile_options(devprompt_warnings INTERFACE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:
+        $<$<CONFIG:Debug>:
+            -Wall
+            -Wextra
+            -Wshadow
+            -Wnon-virtual-dtor
+            -Wold-style-cast
+            -Wpedantic
+        >
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        $<$<CONFIG:Debug>:
+            /W4
+            /permissive-
+        >
+    >
+)
 
 
 # --------------------------------------------------------------------
@@ -154,9 +180,9 @@ target_include_directories(devprompt_lib INTERFACE
   src
 )
 
-# target_link_libraries(devprompt_lib PRIVATE
-#   libgit2package
-# )
+target_link_libraries(devprompt_lib PRIVATE
+  devprompt_warnings
+)
 
 if(WIN32)
   target_link_libraries(devprompt_lib PRIVATE
@@ -185,26 +211,8 @@ target_include_directories(devprompt PRIVATE
 
 target_link_libraries(devprompt PRIVATE
   devprompt_lib
+  devprompt_warnings
 )
-
-
-# --------------------------------------------------------------------
-# Enable Sanitizers
-# --------------------------------------------------------------------
-
-if(ENABLE_SANITIZERS)
-  target_link_libraries(devprompt_lib PRIVATE
-    devprompt_sanitizers
-  )
-  
-  target_link_libraries(devprompt PRIVATE
-    devprompt_sanitizers
-  )
-  
-  target_link_libraries(devprompt_tests PRIVATE
-    devprompt_sanitizers
-  )
-endif()
 
 
 # --------------------------------------------------------------------
@@ -224,10 +232,34 @@ add_executable(devprompt_tests
 
 target_link_libraries(devprompt_tests PRIVATE
   devprompt_lib
+  devprompt_warnings
   Catch2::Catch2WithMain
 )
 
 catch_discover_tests(devprompt_tests)
+
+
+# --------------------------------------------------------------------
+# Enable Sanitizers
+# --------------------------------------------------------------------
+
+if(ENABLE_SANITIZERS)
+  target_link_libraries(devprompt_lib PRIVATE
+    devprompt_sanitizers
+  )
+
+  target_link_libraries(devprompt PRIVATE
+    devprompt_sanitizers
+  )
+
+  target_link_libraries(devprompt_tests PRIVATE
+    devprompt_sanitizers
+  )
+endif()
+
+
+
+
 
 
 # --------------------------------------------------------------------
@@ -257,6 +289,8 @@ install(TARGETS devprompt
 # cmake --build build/asan -j
 # ## test
 # ctest --test-dir build/debug --output-on-failure
+# ## clean
+# cmake --build build/debug --target clean
 # ## install
 # sudo cmake --install build/release --component devprompt --strip
 #
