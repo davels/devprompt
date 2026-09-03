@@ -20,7 +20,7 @@ struct Variable
 };
 
 constexpr auto s_variables = std::to_array<Variable>({
-#define VARIABLE(name, func) { #name, func },
+#define VARIABLE(module, name, func) { #module "." #name, func },
 #include "Variables.def"
 #undef VARIABLE
 });

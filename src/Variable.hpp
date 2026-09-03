@@ -14,7 +14,7 @@ using VariableFunction = void (*)(std::string&);
 
 enum class VariableId
 {
-#define VARIABLE(name, func) name,
+#define VARIABLE(module, name, func) module##_##name,
 #include "Variables.def"
 #undef VARIABLE
 

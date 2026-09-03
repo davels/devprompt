@@ -18,7 +18,7 @@ struct Options
     std::string path;
 
     // format string
-    std::string format = R"({fg:green}%sys_user%@%sys_host%[{/} on {fg:magenta} %vcs_branch%] [{fg:red}\[%vcs_status%\]]{/} at {fg:blue}%path_path%\n{fg:green bold}❯{/} )";
+    std::string format = R"({fg:green}%sys.user%@%sys.host%[{/} on {fg:magenta} %vcs.branch%] [{fg:red}\[%vcs.status%\]]{/} at {fg:blue}%path.path%\n{fg:green bold}❯{/} )";
     
     // general options
     ansi::Output output = ansi::Output::Bash;

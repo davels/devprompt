@@ -6,31 +6,31 @@
 
 // VCS Module
 
-VARIABLE(vcs_remote_icon, VcsModule::remote_icon)
-VARIABLE(vcs_branch,      VcsModule::branch)
-VARIABLE(vcs_state,       VcsModule::state)
-VARIABLE(vcs_wt_icon,     VcsModule::wt_icon)
-VARIABLE(vcs_status,      VcsModule::status)
-VARIABLE(vcs_divergence,  VcsModule::divergence)
+VARIABLE(vcs, remote_icon, VcsModule::remote_icon)
+VARIABLE(vcs, branch,      VcsModule::branch)
+VARIABLE(vcs, state,       VcsModule::state)
+VARIABLE(vcs, wt_icon,     VcsModule::wt_icon)
+VARIABLE(vcs, status,      VcsModule::status)
+VARIABLE(vcs, divergence,  VcsModule::divergence)
 
 // VENV Module
 
-VARIABLE(venv_name, VenvModule::name)
+VARIABLE(venv, name, VenvModule::name)
 
 // SYSTEM Module
 
-VARIABLE(sys_user,      SysModule::user)
-VARIABLE(sys_host,      SysModule::host)
-VARIABLE(sys_sudo_icon, SysModule::sudo_icon)
+VARIABLE(sys, user,      SysModule::user)
+VARIABLE(sys, host,      SysModule::host)
+VARIABLE(sys, sudo_icon, SysModule::sudo_icon)
 
 // PATH Module
 
-VARIABLE(path_path, PathModule::path)
+VARIABLE(path, path, PathModule::path)
 
 // OS Module
 
-VARIABLE(os_distro_icon, OsModule::distro_icon)
+VARIABLE(os, distro_icon, OsModule::distro_icon)
 
 // SHELL Module
 
-VARIABLE(shell_error, ShellModule::error)
+VARIABLE(shell, error, ShellModule::error)
