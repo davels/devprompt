@@ -1,3 +1,7 @@
+#
+# CMakeLists.txt
+#
+
 cmake_minimum_required(VERSION 3.20)
 project(devprompt LANGUAGES CXX C)
 
@@ -12,7 +16,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 # --------------------------------------------------------------------
 
-# Prefer static binary for fast startup and no runtime dependancies
+# option to enable static binary for fast startup and no runtime dependancies
 option(DEVPROMPT_STATIC_RUNTIME "Statically link the C++ runtime" ON)
 
 # default to debug build
@@ -75,26 +79,16 @@ target_compile_options(devprompt_warnings INTERFACE
 
 
 # --------------------------------------------------------------------
-# Version
+# Version (regenerated on every build)
 # --------------------------------------------------------------------
 
-set(DEVPROMPT_VERSION "unknown")
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-    execute_process(
-        COMMAND git describe --tags --match "v[0-9]*" --always --dirty
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        OUTPUT_VARIABLE DEVPROMPT_VERSION
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    string(REGEX REPLACE "^v" "" DEVPROMPT_VERSION "${DEVPROMPT_VERSION}")
-endif()
-
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Version.hpp.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/generated/Version.hpp"
-    @ONLY
+add_custom_target(devprompt_version ALL
+    COMMAND ${CMAKE_COMMAND}
+        -DSRC_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+        -DBIN_ROOT=${CMAKE_CURRENT_BINARY_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateVersionHeader.cmake
+    BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/generated/Version.hpp
+    COMMENT "Generating Version.hpp from git describe"
 )
 
 
@@ -171,7 +165,6 @@ add_library(devprompt_lib
 )
 
 target_include_directories(devprompt_lib PRIVATE
-#  ${libgit2_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
 
@@ -208,6 +201,8 @@ add_executable(devprompt
 target_include_directories(devprompt PRIVATE
   ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
+
+add_dependencies(devprompt devprompt_version)
 
 target_link_libraries(devprompt PRIVATE
   devprompt_lib
