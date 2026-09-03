@@ -19,7 +19,7 @@ std::string s_name;
 
 
 /// Load module data
-bool load(const Options& options)
+bool load([[maybe_unused]] const Options& options)
 {
     if (!IsVariableInUse(VariableId::venv_name))
         return false;

@@ -19,7 +19,7 @@ std::string s_path;
 
 
 /// Load module data
-bool load(const Options& options)
+bool load([[maybe_unused]] const Options& options)
 {
     if (!IsVariableInUse(VariableId::path_path))
         return false;

@@ -192,8 +192,7 @@ Expected<void,std::string> FormatString::compile()
             if (cur.peek() == '?')                // query conditional variant
             {
                 std::ignore = cur.next();  // skip over the '?'
-                auto ch = cur.next();
-                if (ch != '%')
+                if (cur.next() != '%')
                     return Unexpected("query conditional must start with a %variable%");
                 auto var = cur.match('%');
                 if (!var)
@@ -227,10 +226,10 @@ Expected<void,std::string> FormatString::compile()
             // need a mutable span of the characters that stylestr points to
             std::span<char> chars {m_format.data() + (stylestr->data() - m_format.data()),
                                    stylestr->size()};
-            for (auto& ch: chars)
+            for (auto& c: chars)
             {
-                if (ch >= 'A' && ch <= 'Z')
-                    ch = static_cast<char>(ch + ('a' - 'A'));
+                if (c >= 'A' && c <= 'Z')
+                    c = static_cast<char>(ch + ('a' - 'A'));
             }                
             add_style_token(*stylestr);
             break;
@@ -247,7 +246,7 @@ void FormatString::expand(ansi::Output output, std::string& out) const
 {
     struct CondFrame
     {
-        std::size_t start = 0;;
+        std::size_t start = 0;
         bool dirty = false;
     };
     ArrayStack<CondFrame, MAX_CONDITIONAL_DEPTH> cond_stack;

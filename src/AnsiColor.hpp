@@ -15,6 +15,7 @@
 namespace devprompt::ansi
 {
 
+/// output targets
 enum class Output
 {
     None = 0,
@@ -26,6 +27,7 @@ enum class Output
     _Count
 };
 
+/// ansi color codes
 enum class Color
 {
     Black         = 30,
@@ -114,7 +116,7 @@ inline std::string wrap(std::string_view codes, Output output)
     // no color codes 
     if (output == Output::None)
         return result;
-    assert(static_cast<int>(output) < OUTPUT_ENUM_COUNT);
+    assert(static_cast<std::size_t>(output) < OUTPUT_ENUM_COUNT);
     const auto& wrap = detail::get_wrapper(output);
     result += wrap.open;
     result += codes;

@@ -52,15 +52,14 @@ class ShellCommand
             command_line[i] = args[i];
         command_line[args.size()] = nullptr;
         return start_impl(command_line.data());
-    }    
+    }
     
     // read from stdout - returns # chars read, 0 when nothing left
     std::size_t read(std::span<char> buffer);
 
     // read one line from stdout. any part of the line longer than linebuf it ignored
     std::optional<std::span<char>> readline(std::span<char> buffer,
-                                            std::span<char> linebuf,
-                                            bool ignore_overflow=false);
+                                            std::span<char> linebuf);
 
     // read from stderr - returns # chars read, 0 when nothing left
     std::size_t stderr(std::span<char> buffer);
@@ -70,7 +69,7 @@ class ShellCommand
 
     // run the command, read stdout (upto buffer size) and return it
     // return exit code on error
-    template <typename... Args>    
+    template <typename... Args>
     Expected<std::string_view,int> run(std::span<char> buffer, Args... args)
     {
         const char* command_line[] = {args..., nullptr};

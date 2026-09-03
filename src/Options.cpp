@@ -39,18 +39,6 @@ class ArgParser
     int m_inext;
 };
 
-// style parser requires that all style strings have lower case property names
-std::string lowerstyle(std::string_view style)
-{
-    std::string result(style);
-    for (char& c : result) {
-        if (c >= 'A' && c <= 'Z')
-            c = static_cast<char>(c + ('a' - 'A'));
-    }
-
-    return result;
-}
-
 } // namespace
 
 

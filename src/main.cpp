@@ -31,9 +31,9 @@ void show_version(char* appname)
     write_stdout(msg);
 }
 
-void show_help(char* appname)
+void show_help(char* /*appname*/)
 {
-    constexpr std::string_view help_text = R"(A lightweight tool to generate for generating shell prompts.
+    constexpr std::string_view help_text = R"(A lightweight tool for generating shell prompt strings.
 
 Usage: devprompt [OPTIONS] [PATH]
 
@@ -42,7 +42,7 @@ If no PATH is specified it will use the current directory.
 
 Options:
   --format
-          The format of the prompt string (see FORMAT STRING below)
+          The format string for the prompt (see FORMAT STRING below)
   --bash
           Write output compatible with the bash shell
   --zsh

@@ -43,8 +43,7 @@ std::size_t ShellCommand::stderr(std::span<char> buffer)
 }
 
 std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
-                                                      std::span<char> linebuf,
-                                                      bool ignore_overflow/*=false*/)
+                                                      std::span<char> linebuf)
 {
     std::size_t line_size = 0;
 
@@ -61,7 +60,7 @@ std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
                 // EOF reached mid-line (no trailing \n) - return what remains
                 if (linebuf[line_size - 1] == '\r')
                     --line_size;
-                return linebuf.first(line_size);                
+                return linebuf.first(line_size);
             }
             m_impl->pending = {buffer.data(), len};
         }

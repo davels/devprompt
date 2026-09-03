@@ -61,7 +61,7 @@ std::string get_hostname()
 
 
 /// Load module data
-bool load(const Options& options)
+bool load([[maybe_unused]] const Options& options)
 {
     if (!IsVariableInUse(VariableId::sys_user)
         && !IsVariableInUse(VariableId::sys_host)

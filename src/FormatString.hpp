@@ -43,10 +43,10 @@ class FormatString
             VariableFunction vfunc;
         };
 
-        constexpr Token(TokenType type, std::string_view text): type{type}, text{text}
+        constexpr Token(TokenType type_, std::string_view text_): type{type_}, text{text_}
         {}
 
-        constexpr Token(TokenType type, VariableFunction vfunc): type{type}, vfunc{vfunc}
+        constexpr Token(TokenType type_, VariableFunction vfunc_): type{type_}, vfunc{vfunc_}
         {}        
     };
     
