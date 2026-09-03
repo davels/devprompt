@@ -9,12 +9,7 @@
 #include "Options.hpp"
 #include "Version.hpp"
 #include "FormatString.hpp"
-#include "VcsModule.hpp"
-#include "VenvModule.hpp"
-#include "SysModule.hpp"
-#include "PathModule.hpp"
-#include "OsModule.hpp"
-#include "ShellModule.hpp"
+#include "Modules.hpp"
 
 // For write_stdoud
 #if defined(_WIN32)

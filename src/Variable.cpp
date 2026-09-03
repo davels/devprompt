@@ -5,12 +5,7 @@
 #include "Variable.hpp"
 #include <array>
 #include <cassert>
-#include "VcsModule.hpp"
-#include "VenvModule.hpp"
-#include "SysModule.hpp"
-#include "PathModule.hpp"
-#include "OsModule.hpp"
-#include "ShellModule.hpp"
+#include "Modules.hpp"
 
 namespace devprompt
 {
