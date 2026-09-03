@@ -141,6 +141,7 @@ add_library(devprompt_lib
     src/ShellModule.cpp
     src/GitBackend.cpp
     src/SvnBackend.cpp
+    src/runner.cpp
 )
 
 target_include_directories(devprompt_lib PRIVATE
