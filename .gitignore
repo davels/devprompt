@@ -1,8 +1,9 @@
 
 *~
 *.o
-
 compile_commands.json
 .cache/
 build/
 Testing/
+.gdb_bp
+

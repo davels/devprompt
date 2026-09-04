@@ -119,7 +119,7 @@ Expected<void,std::string> run(const Options& options)
     // Expand the format string and write it out
     std::string out;
     out.reserve(128);
-    timed("expand", [&] { format.expand(options.output, out); });
+    timed("expand", [&] { format.expand(options.palette, options.output, out); });
     write_stdout(out);
     
     if (s_timing_on)

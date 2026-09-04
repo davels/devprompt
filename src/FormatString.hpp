@@ -8,12 +8,14 @@
 #include <vector>
 #include "Expected.hpp"
 #include "Variable.hpp"
-#include "AnsiColor.hpp"
+#include "Style.hpp"
+#include "Palette.hpp"
 
 namespace devprompt
 {
 
 struct PendingString;
+class Palette;
 
 class FormatString
 {
@@ -29,7 +31,12 @@ class FormatString
     }
     
     Expected<void,std::string> compile();
-    void expand(ansi::Output output, std::string& out) const;
+    
+    void expand(const Palette& palette, ansi::Output output, std::string& out) const
+    { expand_impl(palette.empty()? nullptr: &palette, output, out); }
+    
+    void expand(ansi::Output output, std::string& out) const
+    { expand_impl(nullptr, output, out); }
     
   private:
     enum class TokenType
@@ -76,6 +83,7 @@ class FormatString
     void add_style_token(std::string_view style)
     { m_tokens.emplace_back(TokenType::Style, style); }
 
+    void expand_impl(const Palette* palette, ansi::Output output, std::string& out) const;
 }; // FomatString
 
 } // namespace devprompt

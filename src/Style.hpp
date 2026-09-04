@@ -1,5 +1,5 @@
 /**
- * @file AnsiColor.hpp
+ * @file Style.hpp
  */
 
 #pragma once
@@ -10,26 +10,29 @@
 #include <string>
 #include <string_view>
 #include <cassert>
-#include "Expected.hpp"
 
-namespace devprompt::ansi
+namespace devprompt
+{
+
+namespace ansi
 {
 
 /// output targets
 enum class Output
 {
-    None = 0,
-    Text,
-    Raw,
-    Bash,
-    Zsh,
-    PowerShell,
+    None = 0,    // output nothing
+    Code,        // just the code
+    Raw,         // raw ansi wrapped codes
+    Bash,        // bash compatible ansi code
+    Zsh,         // zsh
+    PowerShell,  // powershell 
     _Count
 };
 
 /// ansi color codes
 enum class Color
 {
+    None          = 0,
     Black         = 30,
     Red           = 31,
     Green         = 32,
@@ -48,8 +51,12 @@ enum class Color
     BrightWhite   = 97
 };
 
+} // namespace ansi
+
 namespace detail
 {
+
+using namespace ansi;
 
 struct OutputWrapper
 {
@@ -60,12 +67,12 @@ struct OutputWrapper
 static constexpr auto OUTPUT_ENUM_COUNT = static_cast<std::size_t>(Output::_Count);
 static constexpr std::array<OutputWrapper, OUTPUT_ENUM_COUNT> OUTPUT_WRAPPERS
 {{
-    { "",          ""     },  // None
-    { "[[",        "]]"   },  // Text
-    { "\033[",     "m"    },  // Raw
-    { "\001\033[", "m\002"},  // Bash
-    { "%{\033[",   "m%}"  },  // Zsh
-    { "`e[",       "m"    },  // PowerShell
+    { "",          ""     },   // None
+    { "",          ""     },   // Code
+    { "\033[",     "m"    },   // Raw
+    { "\001\033[", "m\002"},   // Bash
+    { "%{\033[",   "m%}"  },   // Zsh
+    { "`e[",       "m"    },   // PowerShell
 }};
 
 constexpr const OutputWrapper& get_wrapper(Output output)
@@ -113,8 +120,7 @@ parse_hex(std::string_view hex)
 inline std::string wrap(std::string_view codes, Output output)
 {
     std::string result;
-    // no color codes 
-    if (output == Output::None)
+    if (output == Output::None)  // output nothing
         return result;
     assert(static_cast<std::size_t>(output) < OUTPUT_ENUM_COUNT);
     const auto& wrap = detail::get_wrapper(output);
@@ -188,13 +194,13 @@ class Style
     // Standard colors
     // --------------------------------------------------------------
 
-    Style& fg(Color color)
+    Style& fg(ansi::Color color)
     {
         add(std::to_string(detail::color_code(color)));
         return *this;
     }
 
-    Style& bg(Color color)
+    Style& bg(ansi::Color color)
     {
         add(std::to_string(detail::color_code(color) + 10));
         return *this;
@@ -208,7 +214,7 @@ class Style
               std::uint8_t g,
               std::uint8_t b)
     {
-        std::string code = "38;2;";
+        std::string code = "38;2;";  // rgb fg code
         code += std::to_string(r);
         code += ';';
         code += std::to_string(g);
@@ -223,7 +229,7 @@ class Style
               std::uint8_t g,
               std::uint8_t b)
     {
-        std::string code = "48;2;";
+        std::string code = "48;2;";  // rgb bg code
         code += std::to_string(r);
         code += ';';
         code += std::to_string(g);
@@ -250,19 +256,31 @@ class Style
         return *this;
     }
 
+    bool empty() const
+    {
+        return m_codes.empty();
+    }
+    
+    Style& merge(const Style& s)
+    {
+        if (!s.empty())
+            add(s.m_codes);
+        return *this;
+    }
+    
     // --------------------------------------------------------------
     // Generate the shell-specific escape sequence
     // --------------------------------------------------------------
 
     [[nodiscard]]
-    std::string str(Output output) const
+    std::string str(ansi::Output output) const
     {
         if (m_codes.empty())
             return {};
         return detail::wrap(m_codes, output);
     }
 
-    void write(Output output, std::string& out) const
+    void write(ansi::Output output, std::string& out) const
     {
         if (m_codes.empty())
             return;
@@ -290,23 +308,10 @@ inline Style style()
 }
 
 // shorthand for style().reset().str(output)
-inline std::string reset(Output output)
+inline std::string reset(ansi::Output output)
 {
     return detail::wrap("0", output);
 }
 
-// Precondition: stylestr only contains lowercase ASCII characters.
-[[nodiscard]]
-Expected<Style,std::string> parse_style(std::string_view stylestr);
-
-// take a style string, parse it and append the result to an output string
-inline void append_style(std::string_view stylestr, Output output, std::string& out)
-{
-    if (stylestr.empty()) return;
-    if (auto style = ansi::parse_style(stylestr))
-    {
-        style->write(output, out);
-    }
-}
 
 } // namespace devprompt::ansi

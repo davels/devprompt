@@ -20,6 +20,7 @@
 #include <cassert>
 #include "ArrayStack.hpp"
 #include "IterCursor.hpp"
+#include "styleparser.hpp"
 
 namespace devprompt
 {
@@ -242,7 +243,7 @@ Expected<void,std::string> FormatString::compile()
     return {};
 }
 
-void FormatString::expand(ansi::Output output, std::string& out) const
+void FormatString::expand_impl(const Palette* palette, ansi::Output output, std::string& out) const
 {
     struct CondFrame
     {
@@ -324,7 +325,7 @@ void FormatString::expand(ansi::Output output, std::string& out) const
             break;
         }
         case TokenType::Style: {
-            auto style = ansi::parse_style(token.text);
+            auto style = parse_style(palette, token.text);
             if (!style)
             {
                 out += "{ERROR:";

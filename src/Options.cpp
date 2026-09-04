@@ -7,6 +7,8 @@
 #include <string>
 #include <string_view>
 #include <optional>
+#include "Style.hpp"
+#include "styleparser.hpp"
 
 namespace devprompt
 {
@@ -46,6 +48,7 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
 {
     Options options;
     bool have_format = false;
+    std::string_view palette_opt;
     
     ArgParser parser(argc, argv);
     while (auto parg = parser.next())
@@ -64,6 +67,12 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
                 return Unexpected("Missing format string");
             options.format = *parser.next();
             have_format = true;
+        }
+        else if (arg == "--palette")
+        {
+            if (!parser.more())
+                return Unexpected("Missing palette string");
+            palette_opt = *parser.next();
         }
         else if (arg == "--bash")
         {
@@ -171,6 +180,21 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         auto format_env = std::getenv("DEVPROMPT_FORMAT");
         if (format_env)
             options.format = format_env;
+    }
+
+    // check for a palette - options first, then ENV
+    if (palette_opt.empty())
+    {
+        auto palette_env = std::getenv("DEVPROMPT_PALETTE");
+        if (palette_env)
+            palette_opt = palette_env;
+    }
+    if (!palette_opt.empty())
+    {
+        auto palette = palette_from_string(palette_opt);
+        if (!palette)
+            return Unexpected(std::move(palette).error());
+        options.palette.swap(*palette);
     }
     return options;
 }

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include "Expected.hpp"
-#include "AnsiColor.hpp"
+#include "Palette.hpp"
 
 namespace devprompt
 {
@@ -16,7 +16,8 @@ struct Options
 {
     // target directory
     std::string path;
-
+    Palette palette;
+    
     // format string
     std::string format = R"({fg:green}%sys.user%@%sys.host%[{/} on {fg:magenta} %vcs.branch%] [{fg:red}\[%vcs.status%\]]{/} at {fg:blue}%path.path%\n{fg:green bold}❯{/} )";
     
