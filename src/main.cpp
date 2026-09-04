@@ -127,6 +127,12 @@ int main(int argc, char** argv)
         return 0;        
     }
 
+    if (options->format.empty())
+    {
+        show_error(argv[0], "no format specified");
+        return 1;
+    }
+    
     auto result = devprompt::run(*options);
     if (!result)
     {

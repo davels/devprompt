@@ -8,7 +8,6 @@
 #include <string_view>
 #include <optional>
 #include "Style.hpp"
-#include "styleparser.hpp"
 
 namespace devprompt
 {
@@ -48,7 +47,7 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
 {
     Options options;
     bool have_format = false;
-    std::string_view palette_opt;
+    bool have_palette = false;
     
     ArgParser parser(argc, argv);
     while (auto parg = parser.next())
@@ -72,16 +71,21 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         {
             if (!parser.more())
                 return Unexpected("Missing palette string");
-            palette_opt = *parser.next();
+            options.palette = *parser.next();
+            have_palette = true;
         }
-        else if (arg == "--bash")
+        else if (arg == "--shell")
         {
-            options.output = ansi::Output::Bash;
+            if (!parser.more())
+                return Unexpected("Missing shell type");
+            auto shelltype = *parser.next();
+            if (shelltype == "bash")
+                options.output = ansi::Output::Bash;
+            else if (shelltype == "zsh")
+                options.output = ansi::Output::Zsh;
+            else
+                return Unexpected("Unknown shell '" + std::string{shelltype} + "'");
         }
-        else if (arg == "--zsh")
-        {
-            options.output = ansi::Output::Zsh;
-        }        
         else if (arg == "--git")
         {
             options.Vcs.git = true;;
@@ -182,20 +186,14 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
             options.format = format_env;
     }
 
-    // check for a palette - options first, then ENV
-    if (palette_opt.empty())
+    // if palette is not specified in args, check ENV
+    if (!have_palette)
     {
         auto palette_env = std::getenv("DEVPROMPT_PALETTE");
         if (palette_env)
-            palette_opt = palette_env;
+            options.palette = palette_env;
     }
-    if (!palette_opt.empty())
-    {
-        auto palette = palette_from_string(palette_opt);
-        if (!palette)
-            return Unexpected(std::move(palette).error());
-        options.palette.swap(*palette);
-    }
+
     return options;
 }
 

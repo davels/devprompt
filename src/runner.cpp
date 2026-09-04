@@ -11,7 +11,7 @@
 #include "FormatString.hpp"
 #include "Modules.hpp"
 #include "utils.hpp"
-
+#include "styleparser.hpp"
 
 namespace devprompt
 {
@@ -108,6 +108,16 @@ Expected<void,std::string> run(const Options& options)
         return result;
     }
 
+    // Expand any specified palette
+    Palette palette;
+    if (!options.palette.empty())
+    {
+        auto p = palette_from_string(options.palette);
+        if (!p)
+            return Unexpected(std::move(p).error());
+        palette.swap(*p);
+    }
+
     // Load module data
     maybe_timed("VcsModule  ", [&] { return VcsModule::load(options); });
     maybe_timed("VenvModule ", [&] { return VenvModule::load(options); });
@@ -115,11 +125,11 @@ Expected<void,std::string> run(const Options& options)
     maybe_timed("PathModule ", [&] { return PathModule::load(options); });
     maybe_timed("OsModule   ", [&] { return OsModule::load(options); });
     maybe_timed("ShellModule", [&] { return ShellModule::load(options); });
-
+    
     // Expand the format string and write it out
     std::string out;
     out.reserve(128);
-    timed("expand", [&] { format.expand(options.palette, options.output, out); });
+    timed("expand", [&] { format.expand(palette, options.output, out); });
     write_stdout(out);
     
     if (s_timing_on)

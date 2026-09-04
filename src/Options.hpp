@@ -16,10 +16,12 @@ struct Options
 {
     // target directory
     std::string path;
-    Palette palette;
     
     // format string
     std::string format = R"({fg:green}%sys.user%@%sys.host%[{/} on {fg:magenta} %vcs.branch%] [{fg:red}\[%vcs.status%\]]{/} at {fg:blue}%path.path%\n{fg:green bold}❯{/} )";
+
+    // palette string
+    std::string palette;
     
     // general options
     ansi::Output output = ansi::Output::Bash;
