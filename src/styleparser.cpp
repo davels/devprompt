@@ -164,11 +164,14 @@ Expected<Style,std::string> parse_style(const Palette* palette, std::string_view
 
 Expected<Palette, std::string> palette_from_string(std::string_view palette_str)
 {
+    Palette palette;
+    if (palette_str.empty())
+        return palette;
+    
     auto sep_count = std::ranges::count(palette_str, ';');
     if (sep_count % 2 == 0)
         return Unexpected("palette has unbalanced ';' separators");
     
-    Palette palette;
     palette.reserve((sep_count +1) / 2);
 
     while (!palette_str.empty())
@@ -185,6 +188,8 @@ Expected<Palette, std::string> palette_from_string(std::string_view palette_str)
         auto style = parse_style(palette_str.substr(sep, end-sep));
         if (!style)
             return Unexpected(std::move(style).error());
+        if (style->empty())
+            return Unexpected("palette style missing");
         palette.add(std::string{name}, std::move(*style));
 
         if (end == std::string_view::npos)

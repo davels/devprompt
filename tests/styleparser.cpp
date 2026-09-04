@@ -2,12 +2,15 @@
  * @file tests/styleoarser.cpp
  *
  * Catch2 unit tests for styleparser.hpp
+ * parse_style
+ * palette_from_string
  */
 
 
 #include <catch2/catch_test_macros.hpp>
 #include "styleparser.hpp"
 #include "Style.hpp"
+#include "Palette.hpp"
 
 using namespace devprompt;
 using devprompt::ansi::Output;
@@ -213,4 +216,182 @@ TEST_CASE("parse_style rejects an unrecognized color word that happens to be 7 c
     auto result = parse_style("fg:orange1");
     REQUIRE_FALSE(static_cast<bool>(result));
     CHECK(result.error() == "invalid foreground color: orange1");
+}
+
+
+// ---------------------------------------------------------------------
+// palette_from_string
+// ---------------------------------------------------------------------
+
+TEST_CASE("palette_from_string parses a single style", "[palette]")
+{
+    auto result = palette_from_string("prompt;bold");
+
+    REQUIRE(result);
+    const auto& palette = *result;
+
+    REQUIRE_FALSE(palette.empty());
+
+    auto style = palette.lookup("prompt");
+    REQUIRE(style);
+    CHECK(style->get().str(ansi::Output::Code) == "1");
+}
+
+TEST_CASE("palette_from_string parses multiple styles", "[palette]")
+{
+    auto result = palette_from_string("prompt;bold;branch;fg:green;error;fg:red");
+
+    REQUIRE(result);
+
+    const auto& palette = *result;
+
+    auto prompt = palette.lookup("prompt");
+    REQUIRE(prompt);
+    CHECK(prompt->get().str(ansi::Output::Code) == "1");
+
+    auto branch = palette.lookup("branch");
+    REQUIRE(branch);
+    CHECK(branch->get().str(ansi::Output::Code) == "32");
+
+    auto error = palette.lookup("error");
+    REQUIRE(error);
+    CHECK(error->get().str(ansi::Output::Code) == "31");
+}
+
+TEST_CASE("palette_from_string parses multiple style tokens", "[palette]")
+{
+    auto result = palette_from_string("prompt;bold italic fg:red bg:blue");
+
+    REQUIRE(result);
+
+    auto style = result->lookup("prompt");
+    REQUIRE(style);
+
+    CHECK(style->get().str(ansi::Output::Code) == "1;3;31;44");
+}
+
+TEST_CASE("palette_from_string ignores whitespace around separators", "[palette]")
+{
+    auto result = palette_from_string(" prompt ; bold ; branch ; fg:green ");
+
+    REQUIRE(result);
+
+    const auto& palette = *result;
+
+    auto prompt = palette.lookup("prompt");
+    REQUIRE(prompt);
+    CHECK(prompt->get().str(ansi::Output::Code) == "1");
+
+    auto branch = palette.lookup("branch");
+    REQUIRE(branch);
+    CHECK(branch->get().str(ansi::Output::Code) == "32");
+}
+
+TEST_CASE("palette_from_string trims whitespace from names", "[palette]")
+{
+    auto result = palette_from_string(
+        "  prompt  ;bold;  branch  ;fg:green");
+
+    REQUIRE(result);
+
+    const auto& palette = *result;
+
+    CHECK(palette.lookup("prompt"));
+    CHECK(palette.lookup("branch"));
+    CHECK_FALSE(palette.lookup("  prompt  "));
+    CHECK_FALSE(palette.lookup("  branch  "));
+}
+
+TEST_CASE("palette_from_string rejects unbalanced separators", "[palette]")
+{
+    SECTION("no separator")
+    {
+        auto result = palette_from_string("prompt");
+
+        REQUIRE_FALSE(result);
+        CHECK(result.error() == "palette has unbalanced ';' separators");
+    }
+
+    SECTION("missing style separator")
+    {
+        auto result = palette_from_string("prompt;bold;branch");
+
+        REQUIRE_FALSE(result);
+        CHECK(result.error() == "palette has unbalanced ';' separators");
+    }
+}
+
+TEST_CASE("palette_from_string rejects missing style", "[palette]")
+{
+    auto result = palette_from_string("prompt;");
+
+    REQUIRE_FALSE(result);
+    CHECK(result.error() == "palette style missing");
+}
+
+TEST_CASE("palette_from_string rejects empty name", "[palette]")
+{
+    SECTION("empty name")
+    {
+        auto result = palette_from_string(";bold");
+
+        REQUIRE_FALSE(result);
+        CHECK(result.error() == "palette has empty name");
+    }
+
+    SECTION("whitespace-only name")
+    {
+        auto result = palette_from_string("   ;bold");
+
+        REQUIRE_FALSE(result);
+        CHECK(result.error() == "palette has empty name");
+    }
+
+    SECTION("empty name between styles")
+    {
+        auto result = palette_from_string("prompt;bold;;red");
+
+        REQUIRE_FALSE(result);
+        CHECK(result.error() == "palette has empty name");
+    }
+}
+
+TEST_CASE("palette_from_string propagates invalid style error", "[palette]")
+{
+    auto result = palette_from_string("prompt;not-a-valid-style");
+
+    REQUIRE_FALSE(result);
+    CHECK_FALSE(result.error().empty());
+}
+
+TEST_CASE("palette_from_string accepts empty input", "[palette]")
+{
+    auto result = palette_from_string("");
+
+    REQUIRE(result);
+    CHECK(result->empty());
+}
+
+TEST_CASE("palette_from_string parses bright colors", "[palette]")
+{
+    auto result = palette_from_string("prompt;bold fg:bright-green bg:bright-red");
+
+    REQUIRE(result);
+
+    auto style = result->lookup("prompt");
+    REQUIRE(style);
+
+    CHECK(style->get().str(ansi::Output::Code) == "1;92;101");
+}
+
+TEST_CASE("palette_from_string parses hex colors", "[palette]")
+{
+    auto result = palette_from_string("prompt;fg:#aa2277 bg:#123456");
+
+    REQUIRE(result);
+
+    auto style = result->lookup("prompt");
+    REQUIRE(style);
+
+    CHECK(style->get().str(ansi::Output::Code) == "38;2;170;34;119;48;2;18;52;86");
 }
