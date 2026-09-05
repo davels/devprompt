@@ -41,12 +41,12 @@ If no version control repository types are specified, it will check for all supp
 If no PATH is specified it will use the current directory.
 
 Options:
-  --format
-          The format string for the prompt (see FORMAT STRING below)
-  --bash
-          Write output compatible with the bash shell
-  --zsh
-          Write output compatible with the zsh shell
+  --format <FORMAT>
+          Format string for the prompt (see FORMAT STRING below)
+  --palette <PALETTE>
+          Define a palette of "name;style" pairs
+  --shell <SHELL>
+          Write output compatible with SHELL (bash, zsh)
   --git
           Scan for git repositories
   --svn
