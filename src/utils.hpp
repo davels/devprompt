@@ -5,8 +5,10 @@
 #pragma once
 
 #include <cctype>
+#include <cstddef>
 #include <string_view>
 #include <tuple>
+#include <array>
 
 // For write_stdout
 #if defined(_WIN32)
@@ -18,13 +20,49 @@
 namespace devprompt::utils
 {
 
+namespace details
+{
+static constexpr std::array<bool, 256> WHITESPACE = []
+{
+    std::array<bool, 256> table{};
+    for (unsigned char c : {' ', '\t', '\n', '\r', '\f', '\v'})
+        table[c] = true;
+    return table;
+}();
+} // namespace details
+
+inline bool isspace(char ch)
+{ return details::WHITESPACE[static_cast<unsigned char>(ch)]; }
+
+inline std::size_t skip_whitespace(std::string_view str, std::size_t pos)
+{
+    while (pos < str.size())
+    {
+        if (!details::WHITESPACE[static_cast<unsigned char>(str[pos])])
+            return pos;
+        ++pos;
+    }
+    return std::string_view::npos;
+}
+
+inline std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
+{
+    while (pos < str.size())
+    {
+        if (details::WHITESPACE[static_cast<unsigned char>(str[pos])])
+            return pos;
+        ++pos;
+    }
+    return std::string_view::npos;
+}
+
 // return a string_view of str with leading and trailing whitespace removed
 inline std::string_view trimmed(std::string_view str)
 {
-    while (!str.empty() && std::isspace(static_cast<unsigned char>(str.front())))
+    while (!str.empty() && isspace(str.front()))
         str.remove_prefix(1);
 
-    while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back())))
+    while (!str.empty() && isspace(str.back()))
         str.remove_suffix(1);
 
     return str;
@@ -33,10 +71,10 @@ inline std::string_view trimmed(std::string_view str)
 // return a string_view of str with leading and trailing whitespace removed
 inline void trim(std::string_view& str)
 {
-    while (!str.empty() && std::isspace(static_cast<unsigned char>(str.front())))
+    while (!str.empty() && isspace(str.front()))
         str.remove_prefix(1);
 
-    while (!str.empty() && std::isspace(static_cast<unsigned char>(str.back())))
+    while (!str.empty() && isspace(str.back()))
         str.remove_suffix(1);
 }
 

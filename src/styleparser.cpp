@@ -50,7 +50,6 @@ constexpr ansi::Color ansi_color(std::string_view color)
 Expected<Style,std::string> parse_style(const Palette* palette, std::string_view stylestr)
 {
     Style style;
-    constexpr std::string_view WHITESPACE = " \t\n\r\f\v";
     std::size_t pos = 0;
 
     // short-circuit a common case, reset tag
@@ -63,12 +62,12 @@ Expected<Style,std::string> parse_style(const Palette* palette, std::string_view
     while (true)
     {
         // skip whitespace
-        pos = stylestr.find_first_not_of(WHITESPACE, pos);
+        pos = utils::skip_whitespace(stylestr, pos);
         if (pos == std::string_view::npos)
             break;
 
         // Find the end of the decl.
-        const auto end = stylestr.find_first_of(WHITESPACE, pos);
+        const auto end = utils::find_first_whitespace(stylestr, pos);
         const auto decl = stylestr.substr(pos,
                                           end == std::string_view::npos
                                           ? std::string_view::npos

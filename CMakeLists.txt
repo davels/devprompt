@@ -224,6 +224,7 @@ add_executable(devprompt_tests
   tests/ShellCommand.cpp
   tests/FormatString.cpp
   tests/styleparser.cpp
+  tests/utils.cpp
 )
 
 target_link_libraries(devprompt_tests PRIVATE
