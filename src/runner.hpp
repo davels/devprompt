@@ -12,7 +12,7 @@ namespace devprompt
 
 struct Options;
 
-Expected<void,std::string> run(const Options& options);
+Expected<void,std::string> run(Options& options);
 
 } // namespace devprompt
 

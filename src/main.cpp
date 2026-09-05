@@ -109,7 +109,7 @@ void show_error(char* appname, const std::string& error)
 
 int main(int argc, char** argv)
 {
-    const auto options = devprompt::parse_options(argc, argv);
+    auto options = devprompt::parse_options(argc, argv);
     if (!options)
     {
         show_error(argv[0], options.error());

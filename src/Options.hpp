@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include "Expected.hpp"
-#include "Palette.hpp"
+#include "Style.hpp"
 
 namespace devprompt
 {

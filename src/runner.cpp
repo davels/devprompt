@@ -91,7 +91,7 @@ void maybe_timed(std::string_view name, F&& f)
 } // namespace
 
 
-Expected<void,std::string> run(const Options& options)
+Expected<void,std::string> run(Options& options)
 {
     s_timing_on = options.show_timing;
 
@@ -99,7 +99,8 @@ Expected<void,std::string> run(const Options& options)
     if (s_timing_on)
         start_time = std::chrono::steady_clock::now();
 
-    FormatString format(options.format);
+    // steal the format string to avoid a copy
+    FormatString format(std::move(options.format));
 
     // parse the format string which also tags used variables
     auto result = timed("parse", [&] { return format.compile(); });
