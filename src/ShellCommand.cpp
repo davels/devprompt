@@ -4,46 +4,44 @@
 
 #include "ShellCommand.hpp"
 #include <cstdio>
-#include <cstddef>
 #include "subprocess.h"
 
 namespace devprompt
 {
 
-struct ShellCommand::Impl
+struct ShellCommandBase::Impl
 {
+    Impl(std::span<char> buf): buffer(buf) {}
     struct subprocess_s subprocess{};
+    std::span<char> buffer;
     std::span<const char> pending;  // partial data in buffer between readline calls
 };
 
-ShellCommand::ShellCommand():
-    m_impl(std::make_unique<Impl>())
+ShellCommandBase::ShellCommandBase(std::span<char> buf):
+    m_impl(std::make_unique<Impl>(buf))
 {}
 
-ShellCommand::~ShellCommand()
+ShellCommandBase::~ShellCommandBase()
 {
     if (m_impl)
         subprocess_destroy(&m_impl->subprocess);
 }
 
-// Move operations defined here where Impl is a complete type
-ShellCommand::ShellCommand(ShellCommand&&) noexcept = default;
-ShellCommand& ShellCommand::operator=(ShellCommand&&) noexcept = default;
-
-std::size_t ShellCommand::read(std::span<char> buffer)
+std::span<char> ShellCommandBase::read()
 {
     auto* pout = subprocess_stdout(&m_impl->subprocess);
-    return std::fread(buffer.data(), 1, buffer.size(), pout);
+    auto len = std::fread(m_impl->buffer.data(), sizeof(char), m_impl->buffer.size(), pout);
+    return m_impl->buffer.first(len);
 }
 
-std::size_t ShellCommand::stderr(std::span<char> buffer)
+std::span<char> ShellCommandBase::stderr()
 {
     auto* pout = subprocess_stderr(&m_impl->subprocess);
-    return std::fread(buffer.data(), 1, buffer.size(), pout);
+    auto len = std::fread(m_impl->buffer.data(), sizeof(char), m_impl->buffer.size(), pout);
+    return m_impl->buffer.first(len);
 }
 
-std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
-                                                      std::span<char> linebuf)
+std::optional<std::string_view> ShellCommandBase::readline(std::span<char> linebuf)
 {
     std::size_t line_size = 0;
 
@@ -51,7 +49,7 @@ std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
     {
         if (m_impl->pending.empty())
         {
-            const auto len = read(buffer);
+            const auto len = read_into(m_impl->buffer);
 
             if (len == 0)  //EOF
             {
@@ -60,9 +58,9 @@ std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
                 // EOF reached mid-line (no trailing \n) - return what remains
                 if (linebuf[line_size - 1] == '\r')
                     --line_size;
-                return linebuf.first(line_size);
+                return std::string_view{linebuf.data(), line_size};
             }
-            m_impl->pending = {buffer.data(), len};
+            m_impl->pending = m_impl->buffer.first(len);
         }
 
         while (!m_impl->pending.empty())
@@ -74,7 +72,7 @@ std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
             {
                 if (line_size > 0 && linebuf[line_size - 1] == '\r')
                     --line_size;
-                return linebuf.first(line_size);
+                return std::string_view{linebuf.data(), line_size};
             }
 
             if (line_size < linebuf.size())
@@ -83,14 +81,14 @@ std::optional<std::span<char>> ShellCommand::readline(std::span<char> buffer,
     }
 }
 
-int ShellCommand::wait()
+int ShellCommandBase::wait()
 {
     int exitcode = -1;
     subprocess_join(&m_impl->subprocess, &exitcode);
     return exitcode;
 }
 
-bool ShellCommand::start_impl(const char* const command_line[])
+bool ShellCommandBase::start_impl(const char* const command_line[])
 {
     subprocess_destroy(&m_impl->subprocess);
 
@@ -102,26 +100,32 @@ bool ShellCommand::start_impl(const char* const command_line[])
     return res == 0;
 }
 
-Expected<std::string_view,int> ShellCommand::run_impl(std::span<char> buffer, const char* const command_line[])
+std::size_t ShellCommandBase::read_into(std::span<char> buffer)
+{
+    auto* pout = subprocess_stdout(&m_impl->subprocess);
+    return std::fread(buffer.data(), sizeof(char), buffer.size(), pout);
+}
+
+Expected<std::string_view,int> ShellCommandBase::run_impl(const char* const command_line[])
 {
     if (!start_impl(command_line))
         return Unexpected(1);
 
     // keep reading until buffer fills or read run out of data
-    std::size_t fillsize = 0;  // amount written to buffer
-    while (fillsize < buffer.size())
+    std::span<char> buffer = m_impl->buffer;
+    while (!buffer.empty())
     {
-        const auto count = read(std::span(buffer).subspan(fillsize));
+        const auto count = read_into(buffer);
         if (count == 0)
-            break;  // read has nothing left
-        fillsize += count;
+            break;  // nothing left to read
+        buffer = buffer.subspan(count); // remaing free space in buffer
     }
-    
+
     // Buffer filled -- peek for one more byte to check if there would be more
-    if (fillsize == buffer.size())
+    if (buffer.empty())
     {
-        char probe[1];
-        if (read(probe) != 0)
+        std::array<char, 1> probe;
+        if (read_into(probe) != 0)
         {
             std::ignore = wait();
             return Unexpected(ERR_BUFFER_OVERFLOW);
@@ -129,10 +133,11 @@ Expected<std::string_view,int> ShellCommand::run_impl(std::span<char> buffer, co
     }
 
     // return view of the filled portion of buffer
-    std::string_view result{buffer.data(), fillsize};
     auto exitcode = wait();
     if (exitcode != 0)
         return Unexpected(exitcode);
+    std::string_view result{m_impl->buffer.data(),
+                            m_impl->buffer.size() - buffer.size()};
     return result;
 }
 

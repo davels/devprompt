@@ -91,16 +91,15 @@ TEST_CASE("wait() reports 0 after a failed start() -- not a usable error signal"
 TEST_CASE("A ShellCommand can be reused for a second command after the first completes",
           "[ShellCommand][start][reuse]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("echo", "first"));
-    char buf[64];
-    auto n1 = sc.read(buf);
-    CHECK(std::string_view(buf, n1) == "first\n");
+    auto n1 = sc.read();
+    CHECK(std::string_view(n1.data(), n1.size()) == "first\n");
     CHECK(sc.wait() == 0);
 
     REQUIRE(sc.start("echo", "second"));
-    auto n2 = sc.read(buf);
-    CHECK(std::string_view(buf, n2) == "second\n");
+    auto n2 = sc.read();
+    CHECK(std::string_view(n2.data(), n2.size()) == "second\n");
     CHECK(sc.wait() == 0);
 }
 
@@ -121,9 +120,9 @@ TEST_CASE("start(span) rejects an argument list longer than MaxArguments",
 {
     std::vector<const char*> args;
     args.push_back("echo");
-    for (std::size_t i = 0; i < ShellCommand::MaxArguments; ++i) // one more than the cap
+    for (std::size_t i = 0; i < ShellCommandBase::MaxArguments; ++i) // one more than the cap
         args.push_back("x");
-    REQUIRE(args.size() == ShellCommand::MaxArguments + 1);
+    REQUIRE(args.size() == ShellCommandBase::MaxArguments + 1);
 
     ShellCommand sc;
     CHECK_FALSE(sc.start(std::span<const char* const>(args.data(), args.size())));
@@ -132,11 +131,11 @@ TEST_CASE("start(span) rejects an argument list longer than MaxArguments",
 TEST_CASE("start(span) accepts an argument list exactly at MaxArguments",
           "[ShellCommand][start][MaxArguments]")
 {
-    CommandArgs<ShellCommand::MaxArguments> args;
+    CommandArgs<ShellCommandBase::MaxArguments> args;
     REQUIRE(args.push_back("echo"));
-    for (std::size_t i = 0; i < ShellCommand::MaxArguments - 1; ++i)
+    for (std::size_t i = 0; i < ShellCommandBase::MaxArguments - 1; ++i)
         REQUIRE(args.push_back("x"));
-    CHECK(args.size() == ShellCommand::MaxArguments);
+    CHECK(args.size() == ShellCommandBase::MaxArguments);
 
     ShellCommand sc;
     REQUIRE(sc.start(args.span()));
@@ -160,9 +159,8 @@ TEST_CASE("The variadic start() template has no MaxArguments cap",
 
 TEST_CASE("run() captures stdout and returns it on success", "[ShellCommand][run]")
 {
-    ShellCommand sc;
-    char buf[256];
-    auto result = sc.run(buf, "echo", "hello");
+    ShellCommand<256> sc;
+    auto result = sc.run("echo", "hello");
     REQUIRE(static_cast<bool>(result));
     CHECK(*result == "hello\n");
 }
@@ -170,9 +168,8 @@ TEST_CASE("run() captures stdout and returns it on success", "[ShellCommand][run
 TEST_CASE("run() returns Unexpected(exitcode) when the command exits non-zero",
           "[ShellCommand][run]")
 {
-    ShellCommand sc;
-    char buf[256];
-    auto result = sc.run(buf, "sh", "-c", "exit 3");
+    ShellCommand<256> sc;
+    auto result = sc.run("sh", "-c", "exit 3");
     REQUIRE_FALSE(static_cast<bool>(result));
     CHECK(result.error() == 3);
 }
@@ -180,9 +177,8 @@ TEST_CASE("run() returns Unexpected(exitcode) when the command exits non-zero",
 TEST_CASE("run() returns Unexpected(1) when the command cannot be launched",
           "[ShellCommand][run]")
 {
-    ShellCommand sc;
-    char buf[256];
-    auto result = sc.run(buf, "this-command-does-not-exist-xyz123");
+    ShellCommand<256> sc;
+    auto result = sc.run("this-command-does-not-exist-xyz123");
     REQUIRE_FALSE(static_cast<bool>(result));
     CHECK(result.error() == 1);
 }
@@ -192,13 +188,12 @@ TEST_CASE("run(span) returns Unexpected(1) when the argument list exceeds MaxArg
 {
     std::vector<const char*> args;
     args.push_back("echo");
-    for (std::size_t i = 0; i < ShellCommand::MaxArguments; ++i)
+    for (std::size_t i = 0; i < ShellCommandBase::MaxArguments; ++i)
         args.push_back("x");
-    REQUIRE(args.size() == ShellCommand::MaxArguments + 1);
+    REQUIRE(args.size() == ShellCommandBase::MaxArguments + 1);
 
-    ShellCommand sc;
-    char buf[256];
-    auto result = sc.run(buf, std::span<const char* const>(args.data(), args.size()));
+    ShellCommand<256> sc;
+    auto result = sc.run(std::span<const char* const>(args.data(), args.size()));
     REQUIRE_FALSE(static_cast<bool>(result));
     CHECK(result.error() == 1);
 }
@@ -210,30 +205,28 @@ TEST_CASE("run(span) returns Unexpected(1) when the argument list exceeds MaxArg
 TEST_CASE("run() reports overflow when the output does not fit the buffer",
           "[ShellCommand][run][overflow]")
 {
-    ShellCommand sc;
-    char buf[4]; // "hello\n" is 6 bytes -- genuinely too small
-    auto result = sc.run(buf, "echo", "hello");
+    // "hello\n" is 6 bytes -- too big for buffer
+    ShellCommand<4> sc;
+    auto result = sc.run("echo", "hello");
     REQUIRE_FALSE(static_cast<bool>(result));
-    CHECK(result.error() == ShellCommand::ERR_BUFFER_OVERFLOW);
+    CHECK(result.error() == ShellCommandBase::ERR_BUFFER_OVERFLOW);
 }
 
 TEST_CASE("run() reports overflow for output much larger than the buffer",
           "[ShellCommand][run][overflow]")
 {
-    ShellCommand sc;
-    char buf[3];
-    auto result = sc.run(buf, "echo", "hello world, this is a much longer line of output");
+    ShellCommand<3> sc;
+    auto result = sc.run("echo", "hello world, this is a much longer line of output");
     REQUIRE_FALSE(static_cast<bool>(result));
-    CHECK(result.error() == ShellCommand::ERR_BUFFER_OVERFLOW);
+    CHECK(result.error() == ShellCommandBase::ERR_BUFFER_OVERFLOW);
 }
 
 TEST_CASE("run() succeeds when output exactly fills the buffer", "[ShellCommand][run][overflow]")
 {
     // "hello\n" is exactly 6 bytes -- this used to be a false-positive
     // overflow; the peek-based check now correctly succeeds here.
-    ShellCommand sc;
-    char buf[6];
-    auto result = sc.run(buf, "echo", "hello");
+    ShellCommand<6> sc;
+    auto result = sc.run("echo", "hello");
     REQUIRE(static_cast<bool>(result));
     CHECK(*result == "hello\n");
 }
@@ -241,9 +234,9 @@ TEST_CASE("run() succeeds when output exactly fills the buffer", "[ShellCommand]
 TEST_CASE("run() succeeds once the buffer is even one byte larger than the output",
           "[ShellCommand][run][overflow]")
 {
-    ShellCommand sc;
-    char buf[7]; // "hello\n" (6 bytes) + 1 byte of headroom
-    auto result = sc.run(buf, "echo", "hello");
+    // "hello\n" (6 bytes) + 1 byte of headroom
+    ShellCommand<7> sc;
+    auto result = sc.run("echo", "hello");
     REQUIRE(static_cast<bool>(result));
     CHECK(*result == "hello\n");
 }
@@ -251,9 +244,8 @@ TEST_CASE("run() succeeds once the buffer is even one byte larger than the outpu
 TEST_CASE("run() succeeds when the buffer is much larger than the output",
           "[ShellCommand][run][overflow]")
 {
-    ShellCommand sc;
-    char buf[256];
-    auto result = sc.run(buf, "echo", "hello");
+    ShellCommand<256> sc;
+    auto result = sc.run("echo", "hello");
     REQUIRE(static_cast<bool>(result));
     CHECK(*result == "hello\n");
 }
@@ -268,9 +260,8 @@ TEST_CASE("run() does not leak a zombie process on the overflow path",
     //
     // Assumes this test binary has no other outstanding child processes of
     // its own at this point in the run.
-    ShellCommand sc;
-    char buf[4];
-    auto result = sc.run(buf, "echo", "hello");
+    ShellCommand<4> sc;
+    auto result = sc.run("echo", "hello");
     REQUIRE_FALSE(static_cast<bool>(result));
 
     usleep(100000); // give the child a moment to fully exit
@@ -286,31 +277,28 @@ TEST_CASE("run() does not leak a zombie process on the overflow path",
 
 TEST_CASE("read() returns stdout bytes from the running process", "[ShellCommand][read]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("printf", "%s", "abc123"));
-    char buf[64];
-    auto n = sc.read(buf);
-    CHECK(std::string_view(buf, n) == "abc123");
+    auto n = sc.read();
+    CHECK(std::string_view(n.data(), n.size()) == "abc123");
     sc.wait();
 }
 
-TEST_CASE("read() returns 0 once stdout is exhausted", "[ShellCommand][read]")
+TEST_CASE("read() returns empty span once stdout is exhausted", "[ShellCommand][read]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("true"));
-    char buf[64];
-    auto n = sc.read(buf);
-    CHECK(n == 0);
+    auto n = sc.read();
+    CHECK(n.empty());
     sc.wait();
 }
 
 TEST_CASE("stderr() returns bytes written to standard error", "[ShellCommand][stderr]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("sh", "-c", "echo err-out >&2"));
-    char buf[64];
-    auto n = sc.stderr(buf);
-    CHECK(std::string_view(buf, n) == "err-out\n");
+    auto n = sc.stderr();
+    CHECK(std::string_view(n.data(), n.size()) == "err-out\n");
     sc.wait();
 }
 
@@ -320,20 +308,19 @@ TEST_CASE("stderr() returns bytes written to standard error", "[ShellCommand][st
 
 TEST_CASE("readline() splits multi-line output on '\\n'", "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("printf", "%s", "line1\nline2\n"));
-    char rbuf[64];
     char lbuf[64];
 
-    auto l1 = sc.readline(rbuf, lbuf);
+    auto l1 = sc.readline(lbuf);
     REQUIRE(l1.has_value());
-    CHECK(std::string_view(l1->data(), l1->size()) == "line1");
+    CHECK(l1 == "line1");
 
-    auto l2 = sc.readline(rbuf, lbuf);
+    auto l2 = sc.readline(lbuf);
     REQUIRE(l2.has_value());
-    CHECK(std::string_view(l2->data(), l2->size()) == "line2");
+    CHECK(l1 == "line2");
 
-    auto l3 = sc.readline(rbuf, lbuf);
+    auto l3 = sc.readline(lbuf);
     CHECK_FALSE(l3.has_value());
 
     sc.wait();
@@ -341,18 +328,17 @@ TEST_CASE("readline() splits multi-line output on '\\n'", "[ShellCommand][readli
 
 TEST_CASE("readline() strips a trailing '\\r' (CRLF line endings)", "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("printf", "%s", "abc\r\ndef\r\n"));
-    char rbuf[64];
     char lbuf[64];
 
-    auto l1 = sc.readline(rbuf, lbuf);
+    auto l1 = sc.readline(lbuf);
     REQUIRE(l1.has_value());
-    CHECK(std::string_view(l1->data(), l1->size()) == "abc");
+    CHECK(l1 == "abc");
 
-    auto l2 = sc.readline(rbuf, lbuf);
+    auto l2 = sc.readline(lbuf);
     REQUIRE(l2.has_value());
-    CHECK(std::string_view(l2->data(), l2->size()) == "def");
+    CHECK(l2 == "def");
 
     sc.wait();
 }
@@ -360,18 +346,17 @@ TEST_CASE("readline() strips a trailing '\\r' (CRLF line endings)", "[ShellComma
 TEST_CASE("readline() reassembles a line spanning multiple internal read() chunks",
           "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<3> sc; // deliberately tiny, forcing many underlying read() calls
     REQUIRE(sc.start("printf", "%s", "hello world\nsecond\n"));
-    char rbuf[3]; // deliberately tiny, forcing many underlying read() calls
     char lbuf[64];
 
-    auto l1 = sc.readline(rbuf, lbuf);
+    auto l1 = sc.readline(lbuf);
     REQUIRE(l1.has_value());
-    CHECK(std::string_view(l1->data(), l1->size()) == "hello world");
+    CHECK(l1 == "hello world");
 
-    auto l2 = sc.readline(rbuf, lbuf);
+    auto l2 = sc.readline(lbuf);
     REQUIRE(l2.has_value());
-    CHECK(std::string_view(l2->data(), l2->size()) == "second");
+    CHECK(l2 == "second");
 
     sc.wait();
 }
@@ -379,21 +364,20 @@ TEST_CASE("readline() reassembles a line spanning multiple internal read() chunk
 TEST_CASE("readline() truncates a line longer than linebuf without losing line sync",
           "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("printf", "%s", "abcdefghij\nnext\n"));
-    char rbuf[64];
     char lbuf[4]; // smaller than "abcdefghij"
 
-    auto l1 = sc.readline(rbuf, lbuf);
+    auto l1 = sc.readline(lbuf);
     REQUIRE(l1.has_value());
     CHECK(l1->size() == 4);
-    CHECK(std::string_view(l1->data(), l1->size()) == "abcd");
+    CHECK(l1 == "abcd");
 
     // Even though "efghij" was discarded, the reader correctly resumed at
     // the next line rather than getting out of sync.
-    auto l2 = sc.readline(rbuf, lbuf);
+    auto l2 = sc.readline(lbuf);
     REQUIRE(l2.has_value());
-    CHECK(std::string_view(l2->data(), l2->size()) == "next");
+    CHECK(l2 == "next");
 
     sc.wait();
 }
@@ -401,29 +385,27 @@ TEST_CASE("readline() truncates a line longer than linebuf without losing line s
 TEST_CASE("readline() returns nullopt immediately when there is no output at all",
           "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("true"));
-    char rbuf[64];
     char lbuf[64];
-    CHECK_FALSE(sc.readline(rbuf, lbuf).has_value());
+    CHECK_FALSE(sc.readline(lbuf).has_value());
     sc.wait();
 }
 
 TEST_CASE("readline() returns a trailing partial line with no terminating '\\n'",
           "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("printf", "%s", "no-newline-at-end"));
-    char rbuf[64];
     char lbuf[64];
 
-    auto l1 = sc.readline(rbuf, lbuf);
+    auto l1 = sc.readline(lbuf);
     REQUIRE(l1.has_value());
-    CHECK(std::string_view(l1->data(), l1->size()) == "no-newline-at-end");
+    CHECK(l1 == "no-newline-at-end");
 
     // The following call hits true EOF (no data at all) and correctly
     // returns nullopt.
-    auto l2 = sc.readline(rbuf, lbuf);
+    auto l2 = sc.readline(lbuf);
     CHECK_FALSE(l2.has_value());
 
     sc.wait();
@@ -432,14 +414,13 @@ TEST_CASE("readline() returns a trailing partial line with no terminating '\\n'"
 TEST_CASE("readline() strips a trailing '\\r' even on an unterminated final line",
           "[ShellCommand][readline]")
 {
-    ShellCommand sc;
+    ShellCommand<64> sc;
     REQUIRE(sc.start("printf", "%s", "abc\r"));
-    char rbuf[64];
     char lbuf[64];
 
-    auto l1 = sc.readline(rbuf, lbuf);
+    auto l1 = sc.readline(lbuf);
     REQUIRE(l1.has_value());
-    CHECK(std::string_view(l1->data(), l1->size()) == "abc");
+    CHECK(l1 == "abc");
 
     sc.wait();
 }
@@ -472,48 +453,3 @@ TEST_CASE("CommandArgs::span() reflects exactly the elements pushed so far",
     CHECK(std::string_view(s[1]) == "b");
 }
 
-// ---------------------------------------------------------------------
-// Move semantics
-// ---------------------------------------------------------------------
-
-TEST_CASE("A moved-to ShellCommand can continue to interact with the process",
-          "[ShellCommand][move]")
-{
-    ShellCommand sc1;
-    REQUIRE(sc1.start("echo", "moved"));
-    ShellCommand sc2 = std::move(sc1);
-    char buf[64];
-    auto n = sc2.read(buf);
-    CHECK(std::string_view(buf, n) == "moved\n");
-    CHECK(sc2.wait() == 0);
-    // sc1 (moved-from) is destroyed at the end of this scope; this no
-    // longer crashes now that ~ShellCommand() checks m_impl for null.
-}
-
-TEST_CASE("A moved-assigned-to ShellCommand can continue to interact with the process",
-          "[ShellCommand][move]")
-{
-    ShellCommand sc3;
-    REQUIRE(sc3.start("echo", "assigned"));
-    ShellCommand sc4;
-    sc4 = std::move(sc3);
-    char buf[64];
-    auto n = sc4.read(buf);
-    CHECK(std::string_view(buf, n) == "assigned\n");
-    CHECK(sc4.wait() == 0);
-}
-
-// A moved-from ShellCommand is left with a null Impl, so calling anything
-// other than the destructor or move-assignment on it (e.g. start(),
-// read(), wait()) is unsafe -- consistent with how a moved-from
-// std::unique_ptr behaves. Left disabled since it's expected to crash by
-// design; enable only if you want to reconfirm that expectation.
-#if 0
-TEST_CASE("Using a moved-from ShellCommand beyond destruction/move-assignment is unsafe",
-          "[ShellCommand][move][unsafe]")
-{
-    ShellCommand sc1;
-    ShellCommand sc2 = std::move(sc1);
-    sc1.start("echo", "should not get here safely"); // dereferences null m_impl
-}
-#endif

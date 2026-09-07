@@ -77,9 +77,8 @@ bool load([[maybe_unused]] const Options& options)
         // not available on win32
 #ifndef _WIN32
         // if sudo credentials are still active, the will return 0 with no output
-        std::array<char, 16> buffer;
-        ShellCommand cmd;
-        auto result = cmd.run(buffer, "sudo", "-n", "true", "2>/dev/null");
+        ShellCommand<16> cmd;
+        auto result = cmd.run("sudo", "-n", "true", "2>/dev/null");
         if (result)
             s_sudo_active = true;
 #endif

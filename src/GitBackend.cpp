@@ -85,7 +85,6 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
         args.push_back(".zdummyz");
     }
 
-    std::array<char, 4096> buffer;
     std::array<char, 50> linebuf;  // only care about the start of the lines
     ShellCommand cmd;
     if (!cmd.start(args.span()))
@@ -93,67 +92,67 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
 
     std::string branch_head_hash;
     std::string remote_alias;
-    while (auto line = cmd.readline(buffer, linebuf))
+    while (auto line = cmd.readline(linebuf))
     {
         if (line->empty()) continue;
         char format = (*line)[0];
         
         if (format == '#')
         {
-            std::string_view str{line->data(), line->size()};
+            std::string_view& header = *line;
             //# Branch name
-            if (vars.branch && str.starts_with("# branch.head "))
+            if (vars.branch && header.starts_with("# branch.head "))
             {
-                str.remove_prefix(14);
-                if (str == "(detatched)")
+                header.remove_prefix(14);
+                if (header == "(detatched)")
                     status.detached = true;
                 else
-                    status.branch = str;
+                    status.branch = header;
             }
-            else if (vars.branch && str.starts_with("# branch.oid"))
+            else if (vars.branch && header.starts_with("# branch.oid"))
             {
-                str.remove_prefix(13);
-                if (str.length() >= 7)
-                    branch_head_hash = std::string{str.substr(0,7)};
+                header.remove_prefix(13);
+                if (header.length() >= 7)
+                    branch_head_hash = std::string{header.substr(0,7)};
             }
             //# Upsteam url
-            else if (vars.remote_icon && str.starts_with("# branch.upstream "))
+            else if (vars.remote_icon && header.starts_with("# branch.upstream "))
             {
-                str.remove_prefix(18);
-                //auto upstream_name = std::string{str};
+                header.remove_prefix(18);
+                //auto upstream_name = std::string{header};
     
                 // Extract the remote alias name (everything before the first '/')
-                auto slash_pos = str.find('/');
+                auto slash_pos = header.find('/');
                 if (slash_pos != std::string_view::npos)
                 {
-                    remote_alias = str.substr(0, slash_pos); // e.g., "origin"
+                    remote_alias = header.substr(0, slash_pos); // eg. "origin"
                 }
             }            
             //# Ahead/Behind
-            else if (vars.divergence && str.starts_with("# branch.ab"))
+            else if (vars.divergence && header.starts_with("# branch.ab"))
             {
-                str.remove_prefix(12);
-                // str is now "+A -B"
-                if (str.length() > 4 && str[0] == '+')
+                header.remove_prefix(12);
+                // header is now "+A -B"
+                if (header.length() > 4 && header[0] == '+')
                 {
                     // parse ahead integer
-                    auto [endptr, ec] = std::from_chars(str.data()+1, str.data() + str.size(), status.ahead);
+                    auto [endptr, ec] = std::from_chars(header.data()+1, header.data() + header.size(), status.ahead);
                     if (ec != std::errc()) // stop if not success
                         continue;
-                    std::size_t consumed = endptr - str.data();
-                    str.remove_prefix(consumed);
+                    std::size_t consumed = endptr - header.data();
+                    header.remove_prefix(consumed);
                     // parse behind integer
-                    if (str.length() > 4 && str[0] == ' ' && str[1] == '-')
+                    if (header.length() > 4 && header[0] == ' ' && header[1] == '-')
                     {
-                        std::from_chars(str.data()+2, str.data() + str.size(), status.behind);
+                        std::from_chars(header.data()+2, header.data() + header.size(), status.behind);
                     }
                 }
             }
             //# Stash count
-            if (str.starts_with("# stash "))
+            if (header.starts_with("# stash "))
             {
-                str.remove_prefix(8);
-                std::from_chars(str.data(), str.data() + str.size(), status.stashed);
+                header.remove_prefix(8);
+                std::from_chars(header.data(), header.data() + header.size(), status.stashed);
             }
         }
         else if (format == '?')
@@ -196,8 +195,7 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
     if (vars.remote_icon && !remote_alias.empty())
     {
         auto remotearg = "remote." + std::string{remote_alias} + ".url";
-        auto url = cmd.run(buffer,
-                           "git", "config", "--get", remotearg.c_str());
+        auto url = cmd.run("git", "config", "--get", remotearg.c_str());
         if (url)
         {
             status.remote_icon = git_host_icon(*url, options);
@@ -255,9 +253,8 @@ std::string determine_repo_state(const std::string& gitdir)
 
 RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& vars)
 {
-    std::array<char, 512> buffer;
     std::string gitdir;
-    ShellCommand cmd;
+    ShellCommand<512> cmd;
 
     // Default to cwd but allow an explicit path
     const std::string work_path = options.path.empty() ? "." : options.path;
@@ -265,7 +262,7 @@ RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& v
     // need the git repo directory for some operations
     if (vars.state || vars.wt_icon)
     {   
-        auto dir = cmd.run(buffer, "git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-dir");
+        auto dir = cmd.run("git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-dir");
         if (!dir || dir->empty())
             return Unexpected(RepoError::NotRepository);
         gitdir = *dir;
@@ -287,7 +284,7 @@ RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& v
     // worktree test
     if (vars.wt_icon)
     {
-        auto dir = cmd.run(buffer, "git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-common-dir");
+        auto dir = cmd.run("git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-common-dir");
         if (dir && !dir->empty() && *dir != gitdir)
         {
             status->isworktree = true;

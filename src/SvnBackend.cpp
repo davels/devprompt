@@ -19,15 +19,13 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     // Default to cwd but allow an explicit path
     const std::string start_path = options.path.empty() ? "." : options.path;
 
-    RepoStatus status;;
-    std::array<char, 4096> buffer;
+    RepoStatus status;
     ShellCommand cmd;
     
     // Get the working-copy revision.
     if (vars.branch && options.Vcs.commit_as_branch)
     {
-        auto revision = cmd.run(buffer,
-                                "svn", "info", "--show-item", "revision", "--non-interactive",
+        auto revision = cmd.run("svn", "info", "--show-item", "revision", "--non-interactive",
                                 start_path.c_str());
         if (!revision)
             return Unexpected(RepoError::NotRepository);
@@ -41,9 +39,9 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
         std::array<char, 8> linebuf;
         if (!cmd.start("svn", "status", "-q", "--non-interactive", start_path.c_str()))
             return Unexpected(RepoError::Error);
-        while (auto line = cmd.readline(buffer, linebuf))
+        while (auto line = cmd.readline(linebuf))
         {
-            switch ((*line)[0])  // char in column 0
+            switch (line->front())  // char in column 0
             {
             case 'M':
             case 'A':

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <array>
 #include <memory>
 #include <span>
@@ -15,19 +16,17 @@
 namespace devprompt
 {
 
-class ShellCommand
+class ShellCommandBase
 {
   public:
-    ShellCommand();
-    ~ShellCommand();
-
-    // delete copy
-    ShellCommand(const ShellCommand&) = delete;
-    ShellCommand& operator=(const ShellCommand&) = delete;
+    // note: constructor is protected
+    ~ShellCommandBase();
     
-    // unique_ptr handles move - have to =default in cpp because of unique_ptr<Impl>
-    ShellCommand(ShellCommand&&) noexcept;
-    ShellCommand& operator=(ShellCommand&&) noexcept;
+    // no copy/move
+    ShellCommandBase(const ShellCommandBase&) = delete;
+    ShellCommandBase& operator=(const ShellCommandBase&) = delete;
+    ShellCommandBase(ShellCommandBase&&) = delete;
+    ShellCommandBase& operator=(ShellCommandBase&&) = delete;
 
     // maximum number of argument allowed for start,run methods that take a span<>
     static constexpr std::size_t MaxArguments = 16;
@@ -54,33 +53,32 @@ class ShellCommand
         return start_impl(command_line.data());
     }
     
-    // read from stdout - returns # chars read, 0 when nothing left
-    std::size_t read(std::span<char> buffer);
+    // read from stdout - returns empty span when nothing left
+    std::span<char> read();
 
-    // read one line from stdout. any part of the line longer than linebuf it ignored
-    std::optional<std::span<char>> readline(std::span<char> buffer,
-                                            std::span<char> linebuf);
+    // read one line from stdout. any part of the line longer than linebuf is dropped
+    std::optional<std::string_view> readline(std::span<char> linebuf);
 
-    // read from stderr - returns # chars read, 0 when nothing left
-    std::size_t stderr(std::span<char> buffer);
+    // read from stderr into user buffer - returns # chars read, 0 when nothing left
+    std::span<char> stderr();
     
     // wait for the process to finish and return the exit code
     int wait();
 
-    // run the command, read stdout (upto buffer size) and return it
+    // run the command, read stdout (upto buffer size) and return it as a string_view.
     // return exit code on error
     template <typename... Args>
-    Expected<std::string_view,int> run(std::span<char> buffer, Args... args)
+    Expected<std::string_view,int> run(Args... args)
     {
         const char* command_line[] = {args..., nullptr};
-        return run_impl(buffer, command_line);
+        return run_impl(command_line);
     }
 
-    // run the command with an arg list, putting stdout into buffer
+    // run the command with an arg list. return string view of the results.
     // if buffer overflows it will return Unexpected(ERR_BUFFER_OVERFLOW)
-    Expected<std::string_view,int> run(std::span<char> buffer, std::span<const char* const> args)
+    Expected<std::string_view, int> run(std::span<const char* const> args)
     {
-        std::array<const char*, MaxArguments + 1> command_line{};
+        std::array<const char*, MaxArguments + 1> command_line;
         if (args.size() > MaxArguments)
             return Unexpected(1);
 
@@ -88,8 +86,11 @@ class ShellCommand
             command_line[i] = args[i];
         command_line[args.size()] = nullptr;
         
-        return run_impl(buffer, command_line.data());
+        return run_impl(command_line.data());
     }
+
+  protected:
+    explicit ShellCommandBase(std::span<char> buf);
     
   private:
     struct Impl;
@@ -97,12 +98,25 @@ class ShellCommand
 
     // _impl command_line arg requires a final NULL in the array
     bool start_impl(const char* const command_line[]);
-    Expected<std::string_view,int> run_impl(std::span<char> buffer, const char* const command_line[]);
+    std::size_t read_into(std::span<char> buffer);
+    Expected<std::string_view,int> run_impl(const char* const command_line[]);
+};
+
+
+template <size_t N=4096>
+  requires (N > 0)
+class ShellCommand: public ShellCommandBase
+{
+  public:
+    ShellCommand(): ShellCommandBase(std::span<char>(m_buffer_)) {}
+                    
+  private:
+    std::array<char, N> m_buffer_;
 };
 
 
 template <std::size_t N>
-  requires (N > 0 && N <= ShellCommand::MaxArguments)
+  requires (N > 0 && N <= ShellCommandBase::MaxArguments)
 class CommandArgs
 {
 public:
