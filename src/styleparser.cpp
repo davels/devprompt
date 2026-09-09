@@ -66,20 +66,21 @@ Expected<Style,std::string> parse_style(const Palette* palette, std::string_view
         if (pos == std::string_view::npos)
             break;
 
-        // Find the end of the decl.
+        // Find the end of the style element.
         const auto end = utils::find_first_whitespace(stylestr, pos);
-        const auto decl = stylestr.substr(pos,
+        const auto elem = stylestr.substr(pos,
                                           end == std::string_view::npos
                                           ? std::string_view::npos
                                           : end - pos);
         bool stop = false;
-        if (decl == "/") {
+        if (elem == "/")
+        {
             style.reset();
             stop = true;
         }
         else if (palette)
         {
-            if (const auto palette_style = palette->lookup(decl))
+            if (const auto palette_style = palette->lookup(elem))
             {
                 style.merge(palette_style->get());
                 stop = true;
@@ -87,9 +88,9 @@ Expected<Style,std::string> parse_style(const Palette* palette, std::string_view
         }
         if (stop) 
         {}
-        else if (decl.starts_with("fg:"))
+        else if (elem.starts_with("fg:"))
         {
-            const auto color_name = decl.substr(3);
+            const auto color_name = elem.substr(3);
             if (is_hex_color(color_name))
             {
                 style.fg(color_name);
@@ -105,9 +106,9 @@ Expected<Style,std::string> parse_style(const Palette* palette, std::string_view
                 style.fg(color_code);
             }
         }
-        else if (decl.starts_with("bg:"))
+        else if (elem.starts_with("bg:"))
         {
-            const auto color_name = decl.substr(3);
+            const auto color_name = elem.substr(3);
             if (is_hex_color(color_name))
             {
                 style.bg(color_name);
@@ -123,34 +124,34 @@ Expected<Style,std::string> parse_style(const Palette* palette, std::string_view
                 style.bg(color_code);
             }
         }
-        else if (decl == "bold") {
+        else if (elem == "bold") {
             style.bold();
         }
-        else if (decl == "italic") {
+        else if (elem == "italic") {
             style.italic();
         }
-        else if (decl == "underline") {
+        else if (elem == "underline") {
             style.underline();
         }
-        // else if (decl == "dimmed") {
+        // else if (elem == "dimmed") {
         //     style.dimmed();
         // }
-        // else if (decl == "inverted") {
+        // else if (elem == "inverted") {
         //     style.inverted();
         // }
-        else if (decl == "blink") {
+        else if (elem == "blink") {
             style.blink();
         }
-        else if (decl == "hidden") {
+        else if (elem == "hidden") {
             style.hidden();
         }
-        else if (decl == "strikethrough") {
+        else if (elem == "strikethrough") {
             style.strikethrough();
         }
         else
         {
-            return Unexpected("invalid style component: " +
-                              std::string{decl});
+            return Unexpected("invalid style element: " +
+                              std::string{elem});
         }
 
         if (end == std::string_view::npos)

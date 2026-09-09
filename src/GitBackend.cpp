@@ -13,7 +13,7 @@
 #include "ShellCommand.hpp"
 #include "filesystem.hpp"
 
-namespace devprompt::VcsModule
+namespace devprompt::vcs
 {
 
 namespace
@@ -294,5 +294,5 @@ RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& v
     return *status;
 }
 
-} // namespace vcsprompt::VcsModule
+} // namespace vcsprompt::vcs
 

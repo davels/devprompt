@@ -4,16 +4,21 @@
 
 #pragma once
 
-#include <string>
+#include <string_view>
+#include "Module.hpp"
 
 namespace devprompt
-{ struct Options; }
-
-namespace devprompt::PathModule
 {
 
-bool load(const Options& options);
+struct Options;
 
-void path(std::string& out);
+struct PathModule
+{
+    static constexpr std::string_view mod_name = "PathModule";
+    static ModuleUsage mod_usage(const Options& options);
+    static bool mod_load(const Options& options);
 
-} // devprompt::PathModule
+    static void path(std::string& out);
+};
+
+} // devprompt

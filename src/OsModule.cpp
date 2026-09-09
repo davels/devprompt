@@ -8,7 +8,7 @@
 #include "Variable.hpp"
 #include "FileReader.hpp"
 
-namespace devprompt::OsModule
+namespace devprompt
 {
 
 namespace
@@ -70,12 +70,17 @@ bool check_ssh()
 } // namespace
 
 
-/// Load module data
-bool load(const Options& options)
+ModuleUsage OsModule::mod_usage(const Options& /*options*/)
 {
     if (!IsVariableInUse(VariableId::os_distro_icon))
-        return false;
-    
+        return ModuleUsage::Unused;
+
+    return ModuleUsage::Used;
+}
+
+/// Load module data
+bool OsModule::mod_load(const Options& options)
+{
 #ifdef _WIN32
     s_distro_icon = " ";
 #else    
@@ -98,10 +103,10 @@ bool load(const Options& options)
 // Variables
 //
 
-void distro_icon(std::string& out)
+void OsModule::distro_icon(std::string& out)
 {
     out += s_distro_icon;
 }
 
-} // namespace devprompt:OsModule
+} // namespace devprompt
 

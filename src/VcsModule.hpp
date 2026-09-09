@@ -4,26 +4,26 @@
 
 #pragma once
 
-#include <string>
+#include <string_view>
+#include "Module.hpp"
 
 namespace devprompt
-{ struct Options; }
-
-namespace devprompt::VcsModule
 {
+struct Options;
 
-bool load(const Options& options);
+struct VcsModule
+{
+    static constexpr std::string_view mod_name = "VcsModule";
+    static ModuleUsage mod_usage(const Options& options);
+    static bool mod_load(const Options& options);
 
-void remote_icon(std::string& out);
-void branch(std::string& out);
-void state(std::string& out);
-void wt_icon(std::string& out);
-void status(std::string& out);
-void divergence(std::string& out);
+    static void remote_icon(std::string& out);
+    static void branch(std::string& out);
+    static void state(std::string& out);
+    static void wt_icon(std::string& out);
+    static void status(std::string& out);
+    static void divergence(std::string& out);
+};
 
-
-
-
-//std::string format(const Options& options);
-}
+} // namespace devprompt
 

@@ -7,7 +7,7 @@
 #include <string>
 #include "Expected.hpp"
 
-namespace devprompt::VcsModule
+namespace devprompt::vcs
 {
 
 struct RepoStatus
@@ -50,4 +50,4 @@ enum class RepoError
 
 using RepoQueryResult = Expected<RepoStatus, RepoError>;
 
-} //namespace devprompt::VcsModule
+} //namespace devprompt::vcs

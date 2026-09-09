@@ -9,7 +9,7 @@
 #include "Options.hpp"
 #include "Variable.hpp"
 
-namespace devprompt::VenvModule
+namespace devprompt
 {
 
 namespace
@@ -18,12 +18,17 @@ std::string s_name;
 } // namespace
 
 
-/// Load module data
-bool load([[maybe_unused]] const Options& options)
+ModuleUsage VenvModule::mod_usage(const Options& /*options*/)
 {
     if (!IsVariableInUse(VariableId::venv_name))
-        return false;
+        return ModuleUsage::Unused;
 
+    return ModuleUsage::Used;
+}
+
+/// Load module data
+bool VenvModule::mod_load([[maybe_unused]] const Options& options)
+{
     const char* env = std::getenv("VIRTUAL_ENV");
     if (!env || *env == '\0')
         return true;
@@ -60,9 +65,9 @@ bool load([[maybe_unused]] const Options& options)
 // Variable functions
 //
 
-void name(std::string& out)
+void VenvModule::name(std::string& out)
 {
     out += s_name;
 }
 
-} // namespace devprompt::VenvModule
+} // namespace devprompt

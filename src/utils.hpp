@@ -7,7 +7,6 @@
 #include <cctype>
 #include <cstddef>
 #include <string_view>
-#include <tuple>
 #include <array>
 
 // For write_stdout
@@ -22,8 +21,7 @@ namespace devprompt::utils
 
 namespace details
 {
-static constexpr std::array<bool, 256> WHITESPACE = []
-{
+static constexpr std::array<bool, 256> WHITESPACE = [] {
     std::array<bool, 256> table{};
     for (unsigned char c : {' ', '\t', '\n', '\r', '\f', '\v'})
         table[c] = true;
@@ -34,6 +32,7 @@ static constexpr std::array<bool, 256> WHITESPACE = []
 inline bool isspace(char ch)
 { return details::WHITESPACE[static_cast<unsigned char>(ch)]; }
 
+[[nodiscard]]
 inline std::size_t skip_whitespace(std::string_view str, std::size_t pos)
 {
     while (pos < str.size())
@@ -45,6 +44,7 @@ inline std::size_t skip_whitespace(std::string_view str, std::size_t pos)
     return std::string_view::npos;
 }
 
+[[nodiscard]]
 inline std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
 {
     while (pos < str.size())
@@ -57,6 +57,7 @@ inline std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
 }
 
 // return a string_view of str with leading and trailing whitespace removed
+[[nodiscard]]
 inline std::string_view trimmed(std::string_view str)
 {
     while (!str.empty() && isspace(str.front()))
@@ -79,9 +80,9 @@ inline void trim(std::string_view& str)
 }
 
 // Write string directly to stdoud
-inline void write_stdout(std::string_view str)
+inline std::size_t write_stdout(std::string_view str)
 {
-    if (str.empty()) return;
+    if (str.empty()) return 0;
     const char* pstr = str.data();
     std::size_t len = str.length();
 
@@ -89,14 +90,15 @@ inline void write_stdout(std::string_view str)
     DWORD written = 0;
     HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
     WriteFile(h, pstr, static_cast<DWORD>(len), &written, nullptr);
+    return written;
 #else
-    std::ignore = ::write(1, pstr, len); // fd 1 = stdout
+    return ::write(1, pstr, len); // fd 1 = stdout
 #endif
 }
 
-inline void write_stderr(std::string_view str)
+inline std::size_t write_stderr(std::string_view str)
 {
-    if (str.empty()) return;
+    if (str.empty()) return 0;
     const char* pstr = str.data();
     std::size_t len = str.length();
 
@@ -104,11 +106,10 @@ inline void write_stderr(std::string_view str)
     DWORD written = 0;
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
     WriteFile(h, pstr, static_cast<DWORD>(len), &written, nullptr);
+    return written;
 #else
-    std::ignore = ::write(2, pstr, len); // fd 2 = stderr
+    return ::write(2, pstr, len); // fd 2 = stderr
 #endif
 }
-
-
 
 } // namespace devprompt::utils

@@ -9,6 +9,7 @@
 #include <variant>
 #include <utility>
 #include <type_traits>
+#include <variant>  // for monostate
 
 namespace devprompt
 {

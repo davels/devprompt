@@ -24,7 +24,7 @@ else
 #include "Variable.hpp"
 #include "ShellCommand.hpp"
     
-namespace devprompt::SysModule
+namespace devprompt
 {
 
 namespace
@@ -60,8 +60,22 @@ std::string get_hostname()
 } // namespace
 
 
+
+ModuleUsage SysModule::mod_usage(const Options& /*options*/)
+{    
+    if (!IsVariableInUse(VariableId::sys_user)
+        && !IsVariableInUse(VariableId::sys_host)
+        && !IsVariableInUse(VariableId::sys_sudo_icon))
+        return ModuleUsage::Unused;
+
+    if (IsVariableInUse(VariableId::sys_sudo_icon))
+        return ModuleUsage::UsedExpensive;
+    
+    return ModuleUsage::Used;
+}
+
 /// Load module data
-bool load([[maybe_unused]] const Options& options)
+bool SysModule::mod_load([[maybe_unused]] const Options& options)
 {
     if (!IsVariableInUse(VariableId::sys_user)
         && !IsVariableInUse(VariableId::sys_host)
@@ -91,21 +105,21 @@ bool load([[maybe_unused]] const Options& options)
 // Variables
 //
 
-void user(std::string& out)
+void SysModule::user(std::string& out)
 {
     out += s_user;
 }
 
-void host(std::string& out)
+void SysModule::host(std::string& out)
 {
     out += s_host;
 }
 
-void sudo_icon(std::string& out)
+void SysModule::sudo_icon(std::string& out)
 {
     if (s_sudo_active)
         out += " ";
 }
 
-} // namespace devprompt::SysModule
+} // namespace devprompt
 

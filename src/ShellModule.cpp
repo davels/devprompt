@@ -7,21 +7,26 @@
 #include "Options.hpp"
 #include "Variable.hpp"
 
-namespace devprompt::ShellModule
+namespace devprompt
 {
 
 namespace
 {
 std::string_view s_error;
-
 } // namespace
 
-/// Load module data
-bool load(const Options& options)
+
+ModuleUsage ShellModule::mod_usage(const Options& /*options*/)
 {
     if (!IsVariableInUse(VariableId::shell_error))
-        return false;
+        return ModuleUsage::Unused;
 
+    return ModuleUsage::Used;
+}
+
+/// Load module data
+bool ShellModule::mod_load(const Options& options)
+{
     if (options.Shell.error != "0")
         s_error = options.Shell.error;
     return true;
@@ -31,7 +36,7 @@ bool load(const Options& options)
 // Variables
 //
 
-void error(std::string& out)
+void ShellModule::error(std::string& out)
 {
     out += s_error;
 }

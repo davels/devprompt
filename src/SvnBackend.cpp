@@ -11,7 +11,7 @@
 #include "ShellCommand.hpp"
 #include "utils.hpp"
 
-namespace devprompt::VcsModule
+namespace devprompt::vcs
 {
 
 RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& vars)
@@ -61,4 +61,4 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     return status;
 }
 
-} // namespace devprompt::VcsModule
+} // namespace devprompt::vcs

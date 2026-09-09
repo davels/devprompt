@@ -9,7 +9,7 @@
 #include "Options.hpp"
 #include "Variable.hpp"
 
-namespace devprompt::PathModule
+namespace devprompt
 {
 
 namespace
@@ -18,12 +18,17 @@ std::string s_path;
 } // namespace
 
 
-/// Load module data
-bool load([[maybe_unused]] const Options& options)
+ModuleUsage PathModule::mod_usage(const Options& /*options*/)
 {
     if (!IsVariableInUse(VariableId::path_path))
-        return false;
+        return ModuleUsage::Unused;
 
+    return ModuleUsage::Used;
+}
+
+/// Load module data
+bool PathModule::mod_load([[maybe_unused]] const Options& options)
+{
     constexpr auto HOMEICON = "~";
     
     const char* pwd = std::getenv("PWD");
@@ -50,10 +55,10 @@ bool load([[maybe_unused]] const Options& options)
 // Variables
 //
 
-void path(std::string& out)
+void PathModule::path(std::string& out)
 {
     out += s_path;
 }
 
-} // namespace devprompt::PathModule
+} // namespace devprompt
 

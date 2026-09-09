@@ -70,7 +70,7 @@ TEST_CASE("parse_style is case-sensitive and rejects uppercase keywords",
 {
     auto result = parse_style("BOLD");
     REQUIRE_FALSE(static_cast<bool>(result));
-    CHECK(result.error() == "invalid style component: BOLD");
+    CHECK(result.error() == "invalid style element: BOLD");
 }
 
 TEST_CASE("Unimplemented attribute keywords are rejected as unknown components",
@@ -80,11 +80,11 @@ TEST_CASE("Unimplemented attribute keywords are rejected as unknown components",
     // are implemented they must be treated as unknown style components.
     auto dimmed = parse_style("dimmed");
     REQUIRE_FALSE(static_cast<bool>(dimmed));
-    CHECK(dimmed.error() == "invalid style component: dimmed");
+    CHECK(dimmed.error() == "invalid style element: dimmed");
 
     auto inverted = parse_style("inverted");
     REQUIRE_FALSE(static_cast<bool>(inverted));
-    CHECK(inverted.error() == "invalid style component: inverted");
+    CHECK(inverted.error() == "invalid style element: inverted");
 }
 
 // ---------------------------------------------------------------------
@@ -95,7 +95,7 @@ TEST_CASE("parse_style rejects an unrecognized style component", "[parse_style][
 {
     auto result = parse_style("sparkle");
     REQUIRE_FALSE(static_cast<bool>(result));
-    CHECK(result.error() == "invalid style component: sparkle");
+    CHECK(result.error() == "invalid style element: sparkle");
 }
 
 TEST_CASE("parse_style stops at the first invalid component even if valid ones follow",
@@ -103,7 +103,7 @@ TEST_CASE("parse_style stops at the first invalid component even if valid ones f
 {
     auto result = parse_style("bold sparkle underline");
     REQUIRE_FALSE(static_cast<bool>(result));
-    CHECK(result.error() == "invalid style component: sparkle");
+    CHECK(result.error() == "invalid style element: sparkle");
 }
 
 // ---------------------------------------------------------------------

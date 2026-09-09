@@ -7,11 +7,9 @@
 #include "RepoStatus.hpp"
 
 namespace devprompt
-{
-struct Options;
-}
+{ struct Options; }
 
-namespace devprompt::VcsModule
+namespace devprompt::vcs
 {
 
 class GitBackend
@@ -20,5 +18,5 @@ class GitBackend
     RepoQueryResult query(const Options& options, const RepoQueryVars& vars);
 };
 
-} // namespace devprompt::VcsModule
+} // namespace devprompt::vcs
 
