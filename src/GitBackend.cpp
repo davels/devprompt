@@ -68,7 +68,9 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
     args.push_back("--porcelain=2");
     args.push_back("--branch");
     args.push_back("--no-renames");
-    if (!options.Vcs.show_untracked)
+    if (options.Vcs.show_untracked)
+        args.push_back("--untracked-files=normal");
+    else
         args.push_back("--untracked-files=no");
     if (options.Vcs.show_stashed)
         args.push_back(("--show-stash"));
