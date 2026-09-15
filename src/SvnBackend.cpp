@@ -10,20 +10,24 @@
 #include "Expected.hpp"
 #include "ShellCommand.hpp"
 #include "utils.hpp"
+#include "CommandContext.hpp"
 
 namespace devprompt::vcs
 {
 
-RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& vars)
+RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx)
 {
     // Default to cwd but allow an explicit path
     const std::string start_path = options.path.empty() ? "." : options.path;
 
     RepoStatus status;
     ShellCommand cmd;
+    auto setter = cmdctx.scoped_set(cmd);
+    if (!setter)
+        return Unexpected(RepoError::Error);
     
     // Get the working-copy revision.
-    if (vars.branch && options.Vcs.commit_as_branch)
+    if (vars.branch && options.Vcs.commit_as_branch && !cmdctx.killed())
     {
         auto revision = cmd.run("svn", "info", "--show-item", "revision", "--non-interactive",
                                 start_path.c_str());
@@ -34,7 +38,7 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     }
 
     // Get working-copy status.
-    if (vars.status)
+    if (vars.status && !cmdctx.killed())
     {    
         std::array<char, 8> linebuf;
         if (!cmd.start("svn", "status", "-q", "--non-interactive", start_path.c_str()))
@@ -58,6 +62,7 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
             }
         }
     }
+    
     return status;
 }
 

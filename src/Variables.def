@@ -4,6 +4,10 @@
  * (Name -> Function) registry for variables
  */
 
+// Core Variables
+
+VARIABLE(core, timeout, Core::timeout)
+
 // VCS Module
 
 VARIABLE(vcs, remote_icon, VcsModule::remote_icon)

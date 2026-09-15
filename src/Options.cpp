@@ -8,6 +8,7 @@
 #include <string_view>
 #include <optional>
 #include "Style.hpp"
+#include "utils.hpp"
 
 namespace devprompt
 {
@@ -151,9 +152,22 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
                 return Unexpected("Missing error value for --shell-error");
             options.Shell.error = *parser.next();
         }        
-        else if (arg == "--timing")
+        else if (arg == "--timings")
         {
-            options.show_timing = true;
+            options.show_timings = true;
+        }
+        else if (arg == "--no-async")
+        {
+            options.no_async = true;
+        }
+        else if (arg == "--timeout")
+        {
+            if (!parser.more())
+                return Unexpected("Missing timeout value for --timeout");
+            auto val = utils::string_to_uint(*parser.next());
+            if (!val)
+                return Unexpected("Timeout value is not a valid number");
+            options.timeout = *val;
         }
         else if (arg == "--version")
         {

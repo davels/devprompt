@@ -27,7 +27,7 @@ ModuleUsage PathModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool PathModule::mod_load([[maybe_unused]] const Options& options)
+bool PathModule::mod_load(const Options& /*options*/, std::stop_token, CommandContext&)
 {
     constexpr auto HOMEICON = "~";
     

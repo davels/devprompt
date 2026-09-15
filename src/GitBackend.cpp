@@ -12,6 +12,7 @@
 #include "Options.hpp"
 #include "ShellCommand.hpp"
 #include "filesystem.hpp"
+#include "CommandContext.hpp"
 
 namespace devprompt::vcs
 {
@@ -53,10 +54,8 @@ std::string git_host_icon(std::string_view url, const Options& options)
     return std::string{};
 }
 
-Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryVars& vars)
+bool git_status_cmds(RepoStatus& status, const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx)
 {
-    RepoStatus status;
-    
     CommandArgs<12> args;
     args.push_back("git");
     if (!options.path.empty())
@@ -89,8 +88,10 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
 
     std::array<char, 50> linebuf;  // only care about the start of the lines
     ShellCommand cmd;
-    if (!cmd.start(args.span()))
-        return Unexpected(1);
+    auto setter = cmdctx.scoped_set(cmd);
+    
+    if (!setter || !cmd.start(args.span()))
+        return false;
 
     std::string branch_head_hash;
     std::string remote_alias;
@@ -190,11 +191,11 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
         else
             status.branch = branch_head_hash;
     }
-    if (auto ret = cmd.wait() != 0)
-        return Unexpected(ret);
+    if (cmd.wait() != 0)
+        return false;
 
     // host icon based on url of remote 
-    if (vars.remote_icon && !remote_alias.empty())
+    if (vars.remote_icon && !remote_alias.empty() && !cmdctx.killed())
     {
         auto remotearg = "remote." + std::string{remote_alias} + ".url";
         auto url = cmd.run("git", "config", "--get", remotearg.c_str());
@@ -204,7 +205,7 @@ Expected<RepoStatus,int> git_status_cmd(const Options& options, const RepoQueryV
         }
     }
 
-    return status;
+    return true;
 }
 
 std::string determine_repo_state(const std::string& gitdir)
@@ -253,47 +254,53 @@ std::string determine_repo_state(const std::string& gitdir)
 } // namespace
 
 
-RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& vars)
+RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx)
 {
-    std::string gitdir;
-    ShellCommand<512> cmd;
-
     // Default to cwd but allow an explicit path
     const std::string work_path = options.path.empty() ? "." : options.path;
-
+    RepoStatus status;
+    
+    ShellCommand<512> cmd;
+    auto setter = cmdctx.scoped_set(cmd);
+    if (!setter)
+        return Unexpected(RepoError::Error);
+    
     // need the git repo directory for some operations
-    if (vars.state || vars.wt_icon)
-    {   
+    std::string gitdir;
+    if ((vars.state || vars.wt_icon) && !cmdctx.killed())
+    {
         auto dir = cmd.run("git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-dir");
         if (!dir || dir->empty())
             return Unexpected(RepoError::NotRepository);
         gitdir = *dir;
     }
 
-    // repo status: branch, status counts, remote icon
-    auto status = git_status_cmd(options, vars);
-    if (!status)
-        return Unexpected(RepoError::NotRepository);
+    // repo status:  remote_icon, branch, status (changed, staged, stashed, etc), divergence
+    if (vars.remote_icon || vars.branch || vars.status || vars.divergence)
+    {
+        if (!git_status_cmds(status, options, vars, cmdctx))
+            return Unexpected(RepoError::NotRepository);
+    }
 
     // current operation
-    if (vars.state)
+    if (vars.state && !cmdctx.killed())
     {
         auto state = determine_repo_state(gitdir);
         if (!state.empty())
-            status->state = state;
+            status.state = state;
     }
 
-    // worktree test
-    if (vars.wt_icon)
+    // worktree test: --git-common-dir != --git-dir
+    if (vars.wt_icon && !cmdctx.killed())
     {
         auto dir = cmd.run("git", "-C", work_path.c_str(), "rev-parse", "--path-format=absolute", "--git-common-dir");
         if (dir && !dir->empty() && *dir != gitdir)
         {
-            status->isworktree = true;
+            status.isworktree = true;
         }
     }
-    
-    return *status;
+
+    return status;
 }
 
 } // namespace vcsprompt::vcs

@@ -4,6 +4,7 @@
 
 #include "SysModule.hpp"
 #include <string>
+
 // get_username
 #ifdef _WIN32
 #include <windows.h>
@@ -12,17 +13,21 @@
 #include <sys/types.h>
 #include <unistd.h>
 #endif
+
 // get_hostname - win32 needs ws2_32.lib
 #ifdef _WIN32
 #include <winsock2.h>
-else
+#else
 #include <unistd.h>
 #endif
+
 #ifdef _MSC_VER    
 #pragma comment(lib, "Ws2_32.lib")
 #endif
+
 #include "Variable.hpp"
 #include "ShellCommand.hpp"
+#include "CommandContext.hpp"
     
 namespace devprompt
 {
@@ -75,7 +80,7 @@ ModuleUsage SysModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool SysModule::mod_load([[maybe_unused]] const Options& options)
+bool SysModule::mod_load(const Options& /*options*/, std::stop_token /*stoken*/, CommandContext& cmdctx)
 {
     if (!IsVariableInUse(VariableId::sys_user)
         && !IsVariableInUse(VariableId::sys_host)
@@ -86,12 +91,15 @@ bool SysModule::mod_load([[maybe_unused]] const Options& options)
         s_user = get_username();
     if (IsVariableInUse(VariableId::sys_host))
         s_host = get_hostname();
-    if (IsVariableInUse(VariableId::sys_sudo_icon))
+    if (IsVariableInUse(VariableId::sys_sudo_icon) && !cmdctx.killed())
     {
         // not available on win32
 #ifndef _WIN32
         // if sudo credentials are still active, the will return 0 with no output
         ShellCommand<16> cmd;
+        auto setter = cmdctx.scoped_set(cmd);
+        if (!setter)
+            return false;
         auto result = cmd.run("sudo", "-n", "true", "2>/dev/null");
         if (result)
             s_sudo_active = true;

@@ -27,7 +27,7 @@ ModuleUsage VenvModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool VenvModule::mod_load([[maybe_unused]] const Options& options)
+bool VenvModule::mod_load([[maybe_unused]] const Options& options, std::stop_token, CommandContext&)
 {
     const char* env = std::getenv("VIRTUAL_ENV");
     if (!env || *env == '\0')

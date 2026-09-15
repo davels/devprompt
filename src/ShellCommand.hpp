@@ -32,7 +32,7 @@ class ShellCommandBase
     static constexpr std::size_t MaxArguments = 16;
     static constexpr int ERR_BUFFER_OVERFLOW = 99999;
     
-    // start the command with the given args
+    /// start the command with the given args
     template <typename... Args>
     bool start(Args... args)
     {
@@ -40,7 +40,7 @@ class ShellCommandBase
         return start_impl(command_line);
     }
 
-    // start the command with an arg list
+    /// start the command with an arg list
     bool start(std::span<const char* const> args)
     {
         std::array<const char*, MaxArguments + 1> command_line{};
@@ -53,20 +53,23 @@ class ShellCommandBase
         return start_impl(command_line.data());
     }
     
-    // read from stdout - returns empty span when nothing left
+    /// read from stdout - returns empty span when nothing left
     std::span<char> read();
 
-    // read one line from stdout. any part of the line longer than linebuf is dropped
+    /// read one line from stdout. any part of the line longer than linebuf is dropped
     std::optional<std::string_view> readline(std::span<char> linebuf);
 
-    // read from stderr into user buffer - returns # chars read, 0 when nothing left
+    /// read from stderr into user buffer - returns # chars read, 0 when nothing left
     std::span<char> stderr();
     
-    // wait for the process to finish and return the exit code
+    /// wait for the process to finish and return the exit code
     int wait();
 
-    // run the command, read stdout (upto buffer size) and return it as a string_view.
-    // return exit code on error
+    /// kill the process
+    void kill();
+    
+    /// run the command, read stdout (upto buffer size) and return it as a string_view.
+    /// return exit code on error
     template <typename... Args>
     Expected<std::string_view,int> run(Args... args)
     {
@@ -74,8 +77,8 @@ class ShellCommandBase
         return run_impl(command_line);
     }
 
-    // run the command with an arg list. return string view of the results.
-    // if buffer overflows it will return Unexpected(ERR_BUFFER_OVERFLOW)
+    /// run the command with an arg list. return string view of the results.
+    /// if buffer overflows it will return Unexpected(ERR_BUFFER_OVERFLOW)
     Expected<std::string_view, int> run(std::span<const char* const> args)
     {
         std::array<const char*, MaxArguments + 1> command_line;

@@ -162,6 +162,7 @@ add_library(devprompt_lib
   src/SvnBackend.cpp
   src/styleparser.cpp
   src/runner.cpp
+  src/CoreVariables.cpp
 )
 
 target_include_directories(devprompt_lib PRIVATE
@@ -225,6 +226,7 @@ add_executable(devprompt_tests
   tests/FormatString.cpp
   tests/styleparser.cpp
   tests/utils.cpp
+  tests/OneShotThreadPool.cpp
 )
 
 target_link_libraries(devprompt_tests PRIVATE

@@ -25,7 +25,7 @@ ModuleUsage ShellModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool ShellModule::mod_load(const Options& options)
+bool ShellModule::mod_load(const Options& options, std::stop_token, CommandContext&)
 {
     if (options.Shell.error != "0")
         s_error = options.Shell.error;

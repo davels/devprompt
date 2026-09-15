@@ -74,8 +74,12 @@ Options:
           Treat WSL as it's own distro instead of reporting the specific distro used
   --os-no-wsl-is-distro
           For WSL, report the linux distro [default]
-  --timing
+  --timings
           Show execution time
+  --no-async
+          Disable asynchronous loading of modules
+  --timeout <ms>  [0 is no timeout, the default]
+          Timeout for generating the prompt string (in milliseconds)
   -h, --help
           Print help
   --version

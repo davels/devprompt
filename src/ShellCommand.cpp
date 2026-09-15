@@ -4,6 +4,7 @@
 
 #include "ShellCommand.hpp"
 #include <cstdio>
+#include <cassert>
 #include "subprocess.h"
 
 namespace devprompt
@@ -30,6 +31,7 @@ ShellCommandBase::~ShellCommandBase()
 std::span<char> ShellCommandBase::read()
 {
     auto* pout = subprocess_stdout(&m_impl->subprocess);
+    if (pout == nullptr) return {};
     auto len = std::fread(m_impl->buffer.data(), sizeof(char), m_impl->buffer.size(), pout);
     return m_impl->buffer.first(len);
 }
@@ -37,6 +39,7 @@ std::span<char> ShellCommandBase::read()
 std::span<char> ShellCommandBase::stderr()
 {
     auto* pout = subprocess_stderr(&m_impl->subprocess);
+    if (pout == nullptr) return {};
     auto len = std::fread(m_impl->buffer.data(), sizeof(char), m_impl->buffer.size(), pout);
     return m_impl->buffer.first(len);
 }
@@ -88,6 +91,12 @@ int ShellCommandBase::wait()
     return exitcode;
 }
 
+void ShellCommandBase::kill()
+{
+    assert(m_impl);
+    subprocess_terminate(&m_impl->subprocess);
+}
+
 bool ShellCommandBase::start_impl(const char* const command_line[])
 {
     subprocess_destroy(&m_impl->subprocess);
@@ -103,6 +112,7 @@ bool ShellCommandBase::start_impl(const char* const command_line[])
 std::size_t ShellCommandBase::read_into(std::span<char> buffer)
 {
     auto* pout = subprocess_stdout(&m_impl->subprocess);
+    if (pout == nullptr) return 0;
     return std::fread(buffer.data(), sizeof(char), buffer.size(), pout);
 }
 

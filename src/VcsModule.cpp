@@ -9,6 +9,7 @@
 #include "GitBackend.hpp"
 #include "SvnBackend.hpp"
 #include "Variable.hpp"
+#include "CommandContext.hpp"
 
 namespace devprompt
 {
@@ -18,7 +19,6 @@ namespace
 vcs::RepoStatus s_status;
 bool s_showcounts = false;
 } // namespace
-
 
 
 ModuleUsage VcsModule::mod_usage(const Options& /*options*/)
@@ -35,7 +35,7 @@ ModuleUsage VcsModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool VcsModule::mod_load(const Options& options)
+bool VcsModule::mod_load(const Options& options, std::stop_token /*stoken*/, CommandContext& cmdctx)
 {
     s_showcounts = options.Vcs.show_counts;
     
@@ -53,7 +53,7 @@ bool VcsModule::mod_load(const Options& options)
     if (options.Vcs.git)
     {    
         vcs::GitBackend git;
-        auto status = git.query(options, vars);
+        auto status = git.query(options, vars, cmdctx);
         if (status)
         {
             s_status = *status;
@@ -61,7 +61,7 @@ bool VcsModule::mod_load(const Options& options)
         }
         else if (status.error() != vcs::RepoError::NotRepository)
         {
-            // maybe print the error
+            // could be an error or a timeout
             return true;
         }
     }
@@ -69,14 +69,14 @@ bool VcsModule::mod_load(const Options& options)
     if (options.Vcs.svn)
     {
         vcs::SvnBackend svn;
-        auto status = svn.query(options, vars);
+        auto status = svn.query(options, vars, cmdctx);
         if (status)
         {
             s_status = *status;
         }
         else if (status.error() != vcs::RepoError::NotRepository)
         {
-            // maybe print the error
+            // error or timeout
         }        
     }
 

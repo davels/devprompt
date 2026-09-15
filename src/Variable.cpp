@@ -6,6 +6,7 @@
 #include <array>
 #include <cassert>
 #include "ModuleInc.hpp"
+#include "CoreVariables.hpp"
 
 namespace devprompt
 {

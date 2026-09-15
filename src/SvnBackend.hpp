@@ -7,7 +7,10 @@
 #include "RepoStatus.hpp"
 
 namespace devprompt
-{ class Options; }
+{
+class Options;
+class CommandContext;
+}
 
 namespace devprompt::vcs
 {
@@ -15,7 +18,7 @@ namespace devprompt::vcs
 class SvnBackend
 {
 public:
-    RepoQueryResult query(const Options& opts, const RepoQueryVars& vars);
+    RepoQueryResult query(const Options& opts, const RepoQueryVars& vars, CommandContext& cmdctx);
 };
 
 } // namespace devprompt::vcs

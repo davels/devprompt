@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <string_view>
 #include <array>
+#include <charconv>
+#include <optional>
 
 // For write_stdout
 #if defined(_WIN32)
@@ -77,6 +79,32 @@ inline void trim(std::string_view& str)
 
     while (!str.empty() && isspace(str.back()))
         str.remove_suffix(1);
+}
+
+[[nodiscard]]
+inline std::optional<int> string_to_int(std::string_view str)
+{
+    int val = 0;
+    // from_chars expects a pointer range [first, last)
+    auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), val);
+
+    if (ec == std::errc())
+        return val;
+    else
+        return std::nullopt;
+}
+
+[[nodiscard]]
+inline std::optional<unsigned int> string_to_uint(std::string_view str)
+{
+    unsigned int val = 0;
+    // from_chars expects a pointer range [first, last)
+    auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), val);
+
+    if (ec == std::errc())
+        return val;
+    else
+        return std::nullopt;
 }
 
 // Write string directly to stdoud

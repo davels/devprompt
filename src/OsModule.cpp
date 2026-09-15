@@ -79,7 +79,7 @@ ModuleUsage OsModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool OsModule::mod_load(const Options& options)
+bool OsModule::mod_load(const Options& options, std::stop_token, CommandContext&)
 {
 #ifdef _WIN32
     s_distro_icon = " ";
