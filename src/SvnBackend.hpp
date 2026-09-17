@@ -18,7 +18,7 @@ namespace devprompt::vcs
 class SvnBackend
 {
 public:
-    RepoQueryResult query(const Options& opts, const RepoQueryVars& vars, CommandContext& cmdctx);
+    RepoQueryResult query(const std::string& path, const Options& opts, const RepoQueryVars& vars, CommandContext& cmdctx);
 };
 
 } // namespace devprompt::vcs

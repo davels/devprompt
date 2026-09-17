@@ -18,7 +18,7 @@ namespace devprompt::vcs
 class GitBackend
 {
   public:
-    RepoQueryResult query(const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx);
+    RepoQueryResult query(const std::string& path, const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx);
 };
 
 } // namespace devprompt::vcs

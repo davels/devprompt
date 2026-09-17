@@ -10,6 +10,9 @@
 #include <array>
 #include <charconv>
 #include <optional>
+#include <chrono>
+#include <utility>
+#include <variant>  // for monostate
 
 // For write_stdout
 #if defined(_WIN32)
@@ -30,6 +33,7 @@ static constexpr std::array<bool, 256> WHITESPACE = [] {
     return table;
 }();
 } // namespace details
+
 
 inline bool isspace(char ch)
 { return details::WHITESPACE[static_cast<unsigned char>(ch)]; }
@@ -105,6 +109,59 @@ inline std::optional<unsigned int> string_to_uint(std::string_view str)
         return val;
     else
         return std::nullopt;
+}
+
+/// Collect timing data for function call
+template<typename F>
+auto timed(bool timeflag, F&& f)
+{
+    if (!timeflag)
+    {
+        if constexpr (std::is_void_v<std::invoke_result_t<F>>)
+        {
+            std::forward<F>(f)();
+            return std::pair{std::monostate{},
+                             std::chrono::steady_clock::duration{}};
+        }
+        else
+        {
+            return std::pair{std::forward<F>(f)(),
+                             std::chrono::steady_clock::duration{}};
+        }
+    }
+
+    const auto start = std::chrono::steady_clock::now();
+    if constexpr (std::is_void_v<std::invoke_result_t<F>>)
+    {
+        std::forward<F>(f)();
+        const auto elapsed = std::chrono::steady_clock::now() - start;
+        return std::pair{std::monostate{}, elapsed};
+    }
+    else
+    {
+        auto result = std::forward<F>(f)();
+        const auto elapsed = std::chrono::steady_clock::now() - start;
+        return std::pair{std::move(result), elapsed};
+    }
+}
+
+inline std::string format_timing(std::chrono::steady_clock::duration elapsed)
+{
+    std::string elapsedstr;
+    using namespace std::chrono;
+    if (elapsed < 1ms)
+    {
+        auto strval = std::to_string(duration_cast<microseconds>(elapsed).count());
+        elapsedstr += std::string(strval.length()>3? 0: 3-strval.length(), ' ') + strval;
+        elapsedstr += "us";
+    }
+    else
+    {
+        auto strval = std::to_string(duration_cast<milliseconds>(elapsed).count());
+        elapsedstr += std::string(strval.length()>3? 0: 3-strval.length(), ' ') + strval;
+        elapsedstr += "ms";
+    }
+    return elapsedstr;
 }
 
 // Write string directly to stdoud

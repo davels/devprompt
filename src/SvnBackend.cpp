@@ -15,12 +15,14 @@
 namespace devprompt::vcs
 {
 
-RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx)
+RepoQueryResult SvnBackend::query(const std::string& path, const Options& options,
+                                  const RepoQueryVars& vars, CommandContext& cmdctx)
 {
     // Default to cwd but allow an explicit path
-    const std::string start_path = options.path.empty() ? "." : options.path;
-
+    const std::string work_path = path.empty() ? "." : path;
     RepoStatus status;
+    status.repotype = vcs::RepoType::svn;
+    
     ShellCommand cmd;
     auto setter = cmdctx.scoped_set(cmd);
     if (!setter)
@@ -30,7 +32,7 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     if (vars.branch && options.Vcs.commit_as_branch && !cmdctx.killed())
     {
         auto revision = cmd.run("svn", "info", "--show-item", "revision", "--non-interactive",
-                                start_path.c_str());
+                                work_path.c_str());
         if (!revision)
             return Unexpected(RepoError::NotRepository);
         status.branch = utils::trimmed(*revision);
@@ -41,7 +43,7 @@ RepoQueryResult SvnBackend::query(const Options& options, const RepoQueryVars& v
     if (vars.status && !cmdctx.killed())
     {    
         std::array<char, 8> linebuf;
-        if (!cmd.start("svn", "status", "-q", "--non-interactive", start_path.c_str()))
+        if (!cmd.start("svn", "status", "-q", "--non-interactive", work_path.c_str()))
             return Unexpected(RepoError::Error);
         while (auto line = cmd.readline(linebuf))
         {

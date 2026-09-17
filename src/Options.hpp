@@ -32,7 +32,7 @@ struct Options
     bool no_async = false;
     unsigned int timeout{0};
     unsigned int module_timeout{0};
-    
+
     struct
     {    
         // repo types to scan

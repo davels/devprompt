@@ -210,6 +210,8 @@ bool git_status_cmds(RepoStatus& status, const Options& options, const RepoQuery
 
 std::string determine_repo_state(const std::string& gitdir)
 {
+    using devprompt::filesystem::path_exists;
+    
     // 1. REBASE States
     if (path_exists(gitdir + "/rebase-merge"))
     {
@@ -254,12 +256,14 @@ std::string determine_repo_state(const std::string& gitdir)
 } // namespace
 
 
-RepoQueryResult GitBackend::query(const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx)
+RepoQueryResult GitBackend::query(const std::string& path, const Options& options,
+                                  const RepoQueryVars& vars, CommandContext& cmdctx)
 {
     // Default to cwd but allow an explicit path
-    const std::string work_path = options.path.empty() ? "." : options.path;
+    const std::string& work_path = path.empty() ? "." : path;
     RepoStatus status;
-    
+    status.repotype = vcs::RepoType::git;
+
     ShellCommand<512> cmd;
     auto setter = cmdctx.scoped_set(cmd);
     if (!setter)

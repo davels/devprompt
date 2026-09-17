@@ -3,21 +3,130 @@
  */
 
 #include "VcsModule.hpp"
+#include <cassert>
+#include <numeric>
 #include <string>
+#include <array>
+#include <algorithm>
+#include <tuple>
 #include "Options.hpp"
 #include "RepoStatus.hpp"
 #include "GitBackend.hpp"
 #include "SvnBackend.hpp"
 #include "Variable.hpp"
 #include "CommandContext.hpp"
+#include "filesystem.hpp"
+#include "utils.hpp"
 
 namespace devprompt
 {
 
-namespace 
+namespace
 {
 vcs::RepoStatus s_status;
 bool s_showcounts = false;
+
+using namespace std::string_view_literals;
+struct RepoInfo
+{
+    vcs::RepoType rtype;
+    std::string_view artifact;
+};
+
+constexpr std::array s_repospec = {
+    RepoInfo {vcs::RepoType::git, ".git"sv},
+    RepoInfo {vcs::RepoType::svn, ".svn"sv},
+};
+
+constexpr size_t MAX_ARTIFACT_LENGTH = std::accumulate(
+    s_repospec.begin(), s_repospec.end(), std::size_t{0},
+    [](size_t current_max, const RepoInfo& item) {
+        return std::max(current_max, item.artifact.length());
+    });
+
+// NOTE: we use the passed repo string as workspace for checking files, but restore it
+// before returning.  It should have at least max(artifact.length) + 2 char of empty space
+// at the end.
+vcs::RepoType check_for_repo_at(std::string& repo)
+{
+    assert(repo.capacity() >= repo.size() + MAX_ARTIFACT_LENGTH + 2);
+    
+    for (auto& rinfo: s_repospec)
+    {
+        auto len = repo.length();  // length before appending the artifact
+        repo += rinfo.artifact;
+        auto found = devprompt::filesystem::path_exists(repo);
+        repo.resize(len);
+        if (found)
+            return rinfo.rtype;
+    }
+    return vcs::RepoType::none;
+}
+
+std::pair<vcs::RepoType, std::string> check_for_repo(const std::string& path)
+{
+    std::string repo;
+    if (path.empty())
+    {
+        repo = filesystem::get_current_directory();
+    }
+    else
+    {
+        repo = filesystem::expand_path(path);
+        if (repo.empty())
+            return {vcs::RepoType::none, {}};
+    }
+
+    repo.reserve(repo.length() + MAX_ARTIFACT_LENGTH + 2);
+    
+#ifdef _WIN32
+    // make a windows path look like a unix path
+    char drive_letter = '\0';
+    if (repo.length() > 2 && repo[1] == ':')
+    {
+        drive_letter = repo[0];
+        repo.erase(0, 2);  // remove "C:" at start
+        // normalize path separators
+        std::ranges::replace(repo, '\\', '/');
+    }
+#endif
+
+    // ensure trailing /
+    if (repo.back() != '/')  repo += '/';
+
+    // check if this path is under version control, but searching up the directory tree
+    vcs::RepoType rtype = vcs::RepoType::none;
+    for (;;)
+    {
+        rtype = check_for_repo_at(repo);
+        if (rtype != vcs::RepoType::none)
+            break;
+        
+        // we're already at the root directory
+        if (repo.length() < 2)
+            break;
+        
+        // strip off the last directory and try again
+        auto pos = repo.rfind('/', repo.length()-2);
+        if (pos == std::string::npos)
+            break;
+        else
+            repo.resize(pos+1); // keep everything upto and including the slash
+    }
+
+    if (rtype == vcs::RepoType::none)
+        return {vcs::RepoType::none, {}};
+
+#ifdef _WIN32
+    if (drive_letter != '\0')
+    {
+        repo.insert(0, {drive_letter, ':'});
+    }
+#endif
+
+    return {rtype, repo};
+}
+
 } // namespace
 
 
@@ -49,35 +158,27 @@ bool VcsModule::mod_load(const Options& options, std::stop_token /*stoken*/, Com
     };
     if (!vars.remote_icon && !vars.branch && !vars.state && !vars.wt_icon && !vars.status && !vars.divergence)
         return false;
+
+    // quickly check if path is under version control
+    auto [rtype, repo] = check_for_repo(options.path);
     
-    if (options.Vcs.git)
-    {    
+    if (options.Vcs.git && rtype == vcs::RepoType::git)
+    {
         vcs::GitBackend git;
-        auto status = git.query(options, vars, cmdctx);
+        auto status = git.query(repo, options, vars, cmdctx);
         if (status)
         {
             s_status = *status;
-            return true;
-        }
-        else if (status.error() != vcs::RepoError::NotRepository)
-        {
-            // could be an error or a timeout
-            return true;
         }
     }
-
-    if (options.Vcs.svn)
+    else if (options.Vcs.svn && rtype == vcs::RepoType::svn)
     {
         vcs::SvnBackend svn;
-        auto status = svn.query(options, vars, cmdctx);
+        auto status = svn.query(repo, options, vars, cmdctx);
         if (status)
         {
             s_status = *status;
         }
-        else if (status.error() != vcs::RepoError::NotRepository)
-        {
-            // error or timeout
-        }        
     }
 
     return true;
@@ -130,7 +231,7 @@ void VcsModule::status(std::string& out)
     collector(s_status.conflicts, '!');
     collector(s_status.unstaged,  '*');
     collector(s_status.staged,    '+');
-    collector(s_status.untracked, '?');  
+    collector(s_status.untracked, '?');
     collector(s_status.stashed,   '$');  // 
 
     out += flags;

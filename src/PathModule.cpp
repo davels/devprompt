@@ -8,6 +8,7 @@
 #include <string_view>
 #include "Options.hpp"
 #include "Variable.hpp"
+#include "filesystem.hpp"
 
 namespace devprompt
 {
@@ -30,11 +31,10 @@ ModuleUsage PathModule::mod_usage(const Options& /*options*/)
 bool PathModule::mod_load(const Options& /*options*/, std::stop_token, CommandContext&)
 {
     constexpr auto HOMEICON = "~";
-    
-    const char* pwd = std::getenv("PWD");
-    if (!pwd || *pwd == '\0')
-        return true;
-    s_path = pwd;
+
+    s_path = devprompt::filesystem::get_current_directory();
+    if (s_path.empty())
+        return true;  // failed, nothing more we can do
     
     const char* home_env = std::getenv("HOME");
     if (home_env)

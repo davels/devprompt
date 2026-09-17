@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <chrono>
-#include <variant>  // for monostate
 #include <algorithm>
 #include <stop_token>
 #include "Options.hpp"
@@ -29,59 +28,6 @@ namespace
 {
 
 bool s_timing_on = false;
-
-inline std::string format_timing(std::chrono::steady_clock::duration elapsed)
-{
-    std::string elapsedstr;
-    using namespace std::chrono;
-    if (elapsed < 1ms)
-    {
-        auto strval = std::to_string(duration_cast<microseconds>(elapsed).count());
-        elapsedstr += std::string(strval.length()>3? 0: 3-strval.length(), ' ') + strval;
-        elapsedstr += "us \n";    
-    }
-    else
-    {
-        auto strval = std::to_string(duration_cast<milliseconds>(elapsed).count());
-        elapsedstr += std::string(strval.length()>3? 0: 3-strval.length(), ' ') + strval;
-        elapsedstr += "ms \n";    
-    }
-    return elapsedstr;
-}
-
-/// Collect timing data for function call
-template<typename F>
-auto timed(F&& f)
-{
-    if (!s_timing_on)
-    {
-        if constexpr (std::is_void_v<std::invoke_result_t<F>>)
-        {
-            std::forward<F>(f)();
-            return std::pair{std::monostate{},
-                             std::chrono::steady_clock::duration{}};
-        }
-        else
-        {
-            return std::pair{std::forward<F>(f)(),
-                             std::chrono::steady_clock::duration{}};
-        }
-    }
-
-    const auto start = std::chrono::steady_clock::now();
-    if constexpr (std::is_void_v<std::invoke_result_t<F>>)
-    {
-        std::forward<F>(f)();
-        const auto elapsed = std::chrono::steady_clock::now() - start;
-        return std::pair{std::monostate{}, elapsed};
-    }
-    else
-    {
-        auto result = std::forward<F>(f)();
-        const auto elapsed = std::chrono::steady_clock::now() - start;
-        return std::pair{std::move(result), elapsed};
-    }
-}
 
 std::pair<int,bool> load_modules(const Options& options)
 {
@@ -112,7 +58,8 @@ std::pair<int,bool> load_modules(const Options& options)
     OneShotThreadPool<s_modules.size()> tpool(poolsize,
                                               std::chrono::milliseconds{options.module_timeout},
                                               std::chrono::milliseconds{options.timeout});
-    // load the module data.
+    // load the module data
+
     // - queue up any async loads
     if (use_async)
     {
@@ -138,14 +85,15 @@ std::pair<int,bool> load_modules(const Options& options)
     // worker threads) for the timeout watchdog
     tpool.start();
     
-    // run the remaining loads synchronously
+    // - run the remaining loads synchronously
     for (auto& mod: s_modules)
     {
         if (mod.usage == ModuleUsage::Unused || mod.async) continue;
 
-        auto [xvoidx, elapsed] = timed([&] { mod.mod_load(options,
-                                                          tpool.shared_stop_token(),
-                                                          tpool.shared_command_context()); });
+        auto [xvoidx, elapsed] = utils::timed(s_timing_on,
+                                              [&] { mod.mod_load(options,
+                                                                 tpool.shared_stop_token(),
+                                                                 tpool.shared_command_context()); });
         mod.elapsed = elapsed;
     }
 
@@ -177,7 +125,8 @@ Expected<void,std::string> run(Options& options)
 
     // parse the format string which also tags used variables
     {
-        auto [result,elapsed] = timed([&] { return format.compile(); });
+        auto [result,elapsed] = utils::timed(s_timing_on,
+                                             [&] { return format.compile(); });
         if (!result)
             return result;
         parse_elapsed = elapsed;
@@ -200,7 +149,8 @@ Expected<void,std::string> run(Options& options)
     std::string out;
     out.reserve(128);
     {
-        auto [xvoidx,elapsed] = timed([&] { format.expand(palette, options.output, out); });
+        auto [xvoidx,elapsed] = utils::timed(s_timing_on,
+                                             [&] { format.expand(palette, options.output, out); });
         expand_elapsed = elapsed;
     }
     write_stdout(out);
@@ -223,7 +173,8 @@ Expected<void,std::string> run(Options& options)
         write_stdout("\n");
         
         write_stdout(" parse:  ");
-        write_stdout(format_timing(parse_elapsed));
+        write_stdout(utils::format_timing(parse_elapsed));
+        write_stdout("\n");
         
         for (const auto& mod: s_modules)
         {
@@ -233,11 +184,13 @@ Expected<void,std::string> run(Options& options)
             write_stdout(std::string(len<MAX_MODULE_NAME_LENGTH?
                                      MAX_MODULE_NAME_LENGTH-len: 0, ' '));
             write_stdout(": ");
-            write_stdout(format_timing(mod.elapsed));
+            write_stdout(utils::format_timing(mod.elapsed));
+            write_stdout("\n");
         }
 
         write_stdout(" expand: ");
-        write_stdout(format_timing(expand_elapsed));
+        write_stdout(utils::format_timing(expand_elapsed));
+        write_stdout("\n");
     }
     return {};
 }
