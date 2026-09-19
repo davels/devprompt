@@ -33,7 +33,7 @@ void show_version(char* appname)
 
 void show_help(char* /*appname*/)
 {
-    constexpr std::string_view help_text = R"(A lightweight tool for generating shell prompt strings.
+    static constexpr std::string_view help_text = R"(A lightweight tool for generating shell prompt strings.
 
 Usage: devprompt [OPTIONS] [PATH]
 

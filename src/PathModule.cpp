@@ -30,7 +30,7 @@ ModuleUsage PathModule::mod_usage(const Options& /*options*/)
 /// Load module data
 bool PathModule::mod_load(const Options& /*options*/, std::stop_token, CommandContext&)
 {
-    constexpr auto HOMEICON = "~";
+    static constexpr auto HOMEICON = "~";
 
     s_path = devprompt::filesystem::get_current_directory();
     if (s_path.empty())
