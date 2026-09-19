@@ -8,7 +8,6 @@
 #include <string>
 #include <array>
 #include <algorithm>
-#include <tuple>
 #include "Options.hpp"
 #include "RepoStatus.hpp"
 #include "GitBackend.hpp"
@@ -16,7 +15,6 @@
 #include "Variable.hpp"
 #include "CommandContext.hpp"
 #include "filesystem.hpp"
-#include "utils.hpp"
 
 namespace devprompt
 {
@@ -33,16 +31,28 @@ struct RepoInfo
     std::string_view artifact;
 };
 
+// artifact object for each repo type
 constexpr std::array s_repospec = {
     RepoInfo {vcs::RepoType::git, ".git"sv},
     RepoInfo {vcs::RepoType::svn, ".svn"sv},
 };
+
+// repos types that we are checking for
+std::array<bool, s_repospec.size()> s_repo_active{};  // initialized to false;
 
 constexpr size_t MAX_ARTIFACT_LENGTH = std::accumulate(
     s_repospec.begin(), s_repospec.end(), std::size_t{0},
     [](size_t current_max, const RepoInfo& item) {
         return std::max(current_max, item.artifact.length());
     });
+
+consteval std::size_t repo_index(vcs::RepoType rtype)
+{
+    for (std::size_t i = 0; i < s_repospec.size(); ++i)
+        if (s_repospec[i].rtype == rtype)
+            return i;
+    return s_repospec.size();
+}
 
 // NOTE: we use the passed repo string as workspace for checking files, but restore it
 // before returning.  It should have at least max(artifact.length) + 2 char of empty space
@@ -51,8 +61,12 @@ vcs::RepoType check_for_repo_at(std::string& repo)
 {
     assert(repo.capacity() >= repo.size() + MAX_ARTIFACT_LENGTH + 2);
     
-    for (auto& rinfo: s_repospec)
+    for (std::size_t idx=0; auto& rinfo: s_repospec)
     {
+        // only check for artifacts of repos that we care about
+        if (!s_repo_active[idx++])
+            continue;
+
         auto len = repo.length();  // length before appending the artifact
         repo += rinfo.artifact;
         auto found = devprompt::filesystem::path_exists(repo);
@@ -130,7 +144,7 @@ std::pair<vcs::RepoType, std::string> check_for_repo(const std::string& path)
 } // namespace
 
 
-ModuleUsage VcsModule::mod_usage(const Options& /*options*/)
+ModuleUsage VcsModule::mod_usage(const Options& options)
 {
     if (IsVariableInUse(VariableId::vcs_remote_icon) ||
         IsVariableInUse(VariableId::vcs_branch) ||
@@ -138,7 +152,14 @@ ModuleUsage VcsModule::mod_usage(const Options& /*options*/)
         IsVariableInUse(VariableId::vcs_wt_icon) ||
         IsVariableInUse(VariableId::vcs_status) ||
         IsVariableInUse(VariableId::vcs_divergence))
+    {
+        if (options.Vcs.git)
+            s_repo_active[repo_index(vcs::RepoType::git)] = true;
+        if (options.Vcs.svn)
+            s_repo_active[repo_index(vcs::RepoType::svn)] = true;
+
         return ModuleUsage::UsedExpensive;
+    }
 
     return ModuleUsage::Unused;
 }
@@ -147,7 +168,7 @@ ModuleUsage VcsModule::mod_usage(const Options& /*options*/)
 bool VcsModule::mod_load(const Options& options, std::stop_token /*stoken*/, CommandContext& cmdctx)
 {
     s_showcounts = options.Vcs.show_counts;
-    
+
     vcs::RepoQueryVars vars {
         .remote_icon = IsVariableInUse(VariableId::vcs_remote_icon),
         .branch      = IsVariableInUse(VariableId::vcs_branch),

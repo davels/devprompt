@@ -87,11 +87,11 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
             else
                 return Unexpected("Unknown shell '" + std::string{shelltype} + "'");
         }
-        else if (arg == "--git")
+        else if (arg == "--vcs-git")
         {
             options.Vcs.git = true;;
         }
-        else if (arg == "--svn")
+        else if (arg == "--vcs-svn")
         {
             options.Vcs.svn = true;;
         }

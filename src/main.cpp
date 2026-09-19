@@ -47,9 +47,9 @@ Options:
           Define a palette of "name;style" pairs
   --shell <SHELL>
           Write output compatible with SHELL (bash, zsh)
-  --git
+  --vcs-git
           Scan for git repositories
-  --svn
+  --vcs-svn
           Scan for subversion (svn) repositories
   --vcs-counts
           Show file counts in vcs status
