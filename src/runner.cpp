@@ -122,26 +122,27 @@ Expected<void,std::string> run(Options& options)
 
     // steal the format string to avoid a copy - Option doesn't need it anymore
     FormatString format(std::move(options.format));
+    Palette palette;
 
-    // parse the format string which also tags used variables
     {
-        auto [result,elapsed] = utils::timed(s_timing_on,
-                                             [&] { return format.compile(); });
+        // parse the format string which also tags used variables
+        auto result = format.compile();
         if (!result)
             return result;
-        parse_elapsed = elapsed;
+
+        // expand any specified palette
+        if (!options.palette.empty())
+        {
+            auto p = palette_from_string(options.palette);
+            if (!p)
+                return Unexpected(std::move(p).error());
+            palette.swap(*p);
+        }
+        
+        if (s_timing_on)
+            parse_elapsed = std::chrono::steady_clock::now() - start_time_run;
     }
     
-    // expand any specified palette
-    Palette palette;
-    if (!options.palette.empty())
-    {
-        auto p = palette_from_string(options.palette);
-        if (!p)
-            return Unexpected(std::move(p).error());
-        palette.swap(*p);
-    }
-
     // load module data
     auto [poolsize,timedout] = load_modules(options);
     
