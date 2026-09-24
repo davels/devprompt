@@ -16,9 +16,10 @@
 #include "styleparser.hpp"
 #include "ModuleRegistry.hpp"
 #include "Module.hpp"
-#include "ModuleInc.hpp"
 #include "OneShotThreadPool.hpp"
 #include "CoreVariables.hpp"
+#include "FileScanner.hpp"
+#include "filesystem.hpp"
 
 namespace devprompt
 {
@@ -28,15 +29,35 @@ namespace
 {
 
 bool s_timing_on = false;
+// run statistics
+std::chrono::steady_clock::duration s_filescanner_elapsed;
+unsigned int s_poolsize = 0;
+bool s_global_timeout_triggered = false;
 
-std::pair<int,bool> load_modules(const Options& options)
+std::string work_path(const Options& options)
 {
+    if (options.path.empty())
+        return filesystem::get_current_directory();
+
+    return filesystem::expand_path(options.path);
+}
+
+void load_modules(const Options& options)
+{
+    FileScanner fscanner;
+    ModuleContext mctx{work_path(options), fscanner};
+
+    if (mctx.path().empty())
+        return;  // path is not valid
+    
+    //
     // check each module for usage
+    //
     int used_count = 0;
     int expensive_count = 0;
     for (auto& mod: s_modules)
     {
-        mod.usage = mod.mod_usage(options);
+        mod.usage = mod.mod_usage(options, fscanner);
         if (mod.usage == ModuleUsage::Used)
             ++used_count;
         else if (mod.usage == ModuleUsage::UsedExpensive)
@@ -46,20 +67,40 @@ std::pair<int,bool> load_modules(const Options& options)
     // only bother with async if we have at least 2 "expensive" modules or 1 "expensive"
     // module and a lot of normal modules
     const bool use_async = !options.no_async && 
-        (expensive_count >= 2 || (expensive_count == 1 && used_count > 5));
+        (expensive_count > 1 || (expensive_count == 1 && used_count > 5));
 
+    // (need at least 1 thread if we're using the file scanner)
+    int fscanner_bump = fscanner.count() > 0? 1: 0;
+
+    //
     // create thread pool
+    //
     // task queue size is set at compile time and we'll never need > s_modules.size()
     // thread pool is 1 per expensive tasks (capped at the smaller of 16 and #cores*2)
-    auto poolsize = !use_async? 0U:
-        std::min({static_cast<uint>(expensive_count), 
+    // (and at least 1 thread if we need the file scanner)
+    auto poolsize = !use_async? fscanner_bump:
+        std::min({static_cast<uint>(expensive_count + fscanner_bump), 
                   std::max(std::thread::hardware_concurrency(),2U) * 2,
                   16U});
     OneShotThreadPool<s_modules.size()> tpool(poolsize,
                                               std::chrono::milliseconds{options.module_timeout},
                                               std::chrono::milliseconds{options.timeout});
-    // load the module data
 
+    //
+    // create a thread pool task for the file scanner
+    //
+    if (fscanner.count() > 0)
+    {
+        tpool.enqueue([&fscanner, &mctx, timing=options.show_timings]
+                      (std::stop_token stoken, CommandContext&) {
+            fscanner.scan_directory(mctx.path(), stoken, timing);
+            mctx.set_filescanner_ready(); // notify any threads waiting for the results
+        });
+    }
+
+    //
+    // load the module data
+    // 
     // - queue up any async loads
     if (use_async)
     {
@@ -68,12 +109,12 @@ std::pair<int,bool> load_modules(const Options& options)
             if (mod.usage == ModuleUsage::UsedExpensive)
             {
                 mod.async = true;
-                tpool.enqueue([&mod, &options, timing=options.show_timings](std::stop_token stoken,
-                                                                            CommandContext& cctx) {
+                tpool.enqueue([&mod, &options, &mctx, timing=options.show_timings](std::stop_token stoken,
+                                                                                   CommandContext& cctx) {
                     auto start = timing?
                         std::chrono::steady_clock::now():
                         std::chrono::steady_clock::time_point{};
-                    /*mod.result =*/ mod.mod_load(options, stoken, cctx);
+                    /*mod.result =*/ mod.mod_load(options, mctx, stoken, cctx);
                     if (timing)
                         mod.elapsed = std::chrono::steady_clock::now() - start;
                 });
@@ -91,21 +132,23 @@ std::pair<int,bool> load_modules(const Options& options)
         if (mod.usage == ModuleUsage::Unused || mod.async) continue;
 
         auto [xvoidx, elapsed] = utils::timed(s_timing_on,
-                                              [&] { mod.mod_load(options,
+                                              [&] { mod.mod_load(options, mctx,
                                                                  tpool.shared_stop_token(),
                                                                  tpool.shared_command_context()); });
         mod.elapsed = elapsed;
     }
 
     // wait for the workter threads to finish
-    if (use_async)
-        tpool.wait_all();
+    tpool.wait_all();
     tpool.stop_watchdog();
     
     // update Core variable
     if (tpool.global_timeout_reached())
         Core::set_timeout_reached();
-    return {use_async? poolsize: 0, tpool.global_timeout_reached()};
+    
+    s_filescanner_elapsed = fscanner.elapsed();
+    s_poolsize = poolsize;
+    s_global_timeout_triggered = tpool.global_timeout_reached();
 }
 
 } // namespace
@@ -144,7 +187,7 @@ Expected<void,std::string> run(Options& options)
     }
     
     // load module data
-    auto [poolsize,timedout] = load_modules(options);
+    load_modules(options);
     
     // expand the format string and write it out
     std::string out;
@@ -163,19 +206,26 @@ Expected<void,std::string> run(Options& options)
         const auto elapsed = steady_clock::now() - start_time_run;
         write_stdout(std::to_string(duration_cast<milliseconds>(elapsed).count()));
         write_stdout("ms)");
-        if (poolsize > 0)
+        if (s_poolsize > 0)
         {
             write_stdout(" using ");
-            write_stdout(std::to_string(poolsize));
+            write_stdout(std::to_string(s_poolsize));
             write_stdout(" worker threads");
         }
-        if (timedout)
+        if (s_global_timeout_triggered)
             write_stdout(" [timeout triggered]");
         write_stdout("\n");
         
-        write_stdout(" parse:  ");
+        write_stdout(" parse:     ");
         write_stdout(utils::format_timing(parse_elapsed));
         write_stdout("\n");
+
+        if (s_filescanner_elapsed != s_filescanner_elapsed.zero())
+        {
+            write_stdout(" file scan: ");
+            write_stdout(utils::format_timing(s_filescanner_elapsed));
+            write_stdout("\n");
+        }
         
         for (const auto& mod: s_modules)
         {
@@ -189,7 +239,7 @@ Expected<void,std::string> run(Options& options)
             write_stdout("\n");
         }
 
-        write_stdout(" expand: ");
+        write_stdout(" expand:    ");
         write_stdout(utils::format_timing(expand_elapsed));
         write_stdout("\n");
     }

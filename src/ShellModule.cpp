@@ -16,7 +16,7 @@ std::string_view s_error;
 } // namespace
 
 
-ModuleUsage ShellModule::mod_usage(const Options& /*options*/)
+ModuleUsage ShellModule::mod_usage(const Options&, FileScanner&)
 {
     if (!IsVariableInUse(VariableId::shell_error))
         return ModuleUsage::Unused;
@@ -25,7 +25,7 @@ ModuleUsage ShellModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool ShellModule::mod_load(const Options& options, std::stop_token, CommandContext&)
+bool ShellModule::mod_load(const Options& options, const ModuleContext&, std::stop_token, CommandContext&)
 {
     if (options.Shell.error != "0")
         s_error = options.Shell.error;

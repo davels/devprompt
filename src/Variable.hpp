@@ -12,13 +12,11 @@ namespace devprompt
 
 using VariableFunction = void (*)(std::string&);
 
-enum class VariableId
+enum class VariableId: int
 {
 #define VARIABLE(module, name, func) module##_##name,
 #include "Variables.def"
 #undef VARIABLE
-
-    _Count
 };
 
 VariableFunction LookupVariable(std::string_view vname);

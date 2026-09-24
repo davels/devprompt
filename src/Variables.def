@@ -1,7 +1,7 @@
 /**
  * @file Variable.def
  *
- * (Name -> Function) registry for variables
+ * (Module.Name -> Function) registry for variables
  */
 
 // Core Variables

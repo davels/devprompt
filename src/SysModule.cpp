@@ -66,7 +66,7 @@ std::string get_hostname()
 
 
 
-ModuleUsage SysModule::mod_usage(const Options& /*options*/)
+ModuleUsage SysModule::mod_usage(const Options&, FileScanner&)
 {    
     if (!IsVariableInUse(VariableId::sys_user)
         && !IsVariableInUse(VariableId::sys_host)
@@ -80,7 +80,7 @@ ModuleUsage SysModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool SysModule::mod_load(const Options& /*options*/, std::stop_token /*stoken*/, CommandContext& cmdctx)
+bool SysModule::mod_load(const Options&, const ModuleContext&, std::stop_token, CommandContext& cmdctx)
 {
     if (!IsVariableInUse(VariableId::sys_user)
         && !IsVariableInUse(VariableId::sys_host)

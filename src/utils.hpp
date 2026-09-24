@@ -111,6 +111,34 @@ inline std::optional<unsigned int> string_to_uint(std::string_view str)
         return std::nullopt;
 }
 
+
+#ifdef _WIN32
+// Windows needs utf8 <=> utf16 conversion functions for api calls
+
+inline std::wstring Utf8ToWide(std::string_view s)
+{
+    if (s.empty()) return std::wstring();
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
+    if (len <= 0) return {};  // conversion failed
+    std::wstring ws(static_cast<size_t>(len), L'\0');
+    ::MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), ws.data(), len);
+    return ws;
+}
+
+inline std::string WideToUtf8(std::wstring_view ws)
+{
+    if (ws.empty()) return std::string();
+    int len = ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()),
+                                    nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return {};  // conversion failed
+    std::string s(static_cast<size_t>(len), '\0');
+    ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()),
+                          s.data(), len, nullptr, nullptr);
+    return s;
+}
+
+#endif // _WIN32
+
 /// Collect timing data for function call
 template<typename F>
 auto timed(bool timeflag, F&& f)

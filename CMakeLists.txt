@@ -163,6 +163,7 @@ add_library(devprompt_lib
   src/styleparser.cpp
   src/runner.cpp
   src/CoreVariables.cpp
+  src/FileScanner.cpp
 )
 
 target_include_directories(devprompt_lib PRIVATE

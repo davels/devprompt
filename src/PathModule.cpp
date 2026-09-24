@@ -8,7 +8,6 @@
 #include <string_view>
 #include "Options.hpp"
 #include "Variable.hpp"
-#include "filesystem.hpp"
 
 namespace devprompt
 {
@@ -19,7 +18,7 @@ std::string s_path;
 } // namespace
 
 
-ModuleUsage PathModule::mod_usage(const Options& /*options*/)
+ModuleUsage PathModule::mod_usage(const Options&, FileScanner&)
 {
     if (!IsVariableInUse(VariableId::path_path))
         return ModuleUsage::Unused;
@@ -28,14 +27,11 @@ ModuleUsage PathModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool PathModule::mod_load(const Options& /*options*/, std::stop_token, CommandContext&)
+bool PathModule::mod_load(const Options&, const ModuleContext& mctx, std::stop_token, CommandContext&)
 {
     static constexpr auto HOMEICON = "~";
 
-    s_path = devprompt::filesystem::get_current_directory();
-    if (s_path.empty())
-        return true;  // failed, nothing more we can do
-    
+    s_path = mctx.path();
     const char* home_env = std::getenv("HOME");
     if (home_env)
     {

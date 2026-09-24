@@ -18,6 +18,8 @@ namespace devprompt
 {
 
 struct Options;
+class FileScanner;
+class ModuleContext;
 class CommandContext;
 
 /// list of all Modules
@@ -32,10 +34,14 @@ using Modules = std::tuple<
 
 /// Module "interface" as a concept
 template<typename T>
-concept ModuleLike = requires(const Options& opts, std::stop_token stoken, CommandContext& cctx) {
+concept ModuleLike = requires(const Options& opts,
+                              FileScanner& fscanner,
+                              const ModuleContext& mctx,
+                              std::stop_token stoken,
+                              CommandContext& cctx) {
     { T::mod_name } -> std::convertible_to<const std::string_view>;
-    { T::mod_usage(opts) } -> std::same_as<ModuleUsage>;
-    { T::mod_load(opts, stoken, cctx) } -> std::same_as<bool>;
+    { T::mod_usage(opts, fscanner) } -> std::same_as<ModuleUsage>;
+    { T::mod_load(opts, mctx, stoken, cctx) } -> std::same_as<bool>;
 };
 
 /// Data tracked per module
@@ -43,8 +49,8 @@ struct ModuleEntry
 {
     // compile-time data
     const std::string_view name;
-    ModuleUsage (* const mod_usage)(const Options&);
-    bool (* const mod_load)(const Options&, std::stop_token, CommandContext&);
+    ModuleUsage (* const mod_usage)(const Options&, FileScanner&);
+    bool (* const mod_load)(const Options&, const ModuleContext&, std::stop_token, CommandContext&);
     // run-time data
     std::chrono::steady_clock::duration elapsed{};
     ModuleUsage usage = ModuleUsage::Unused;

@@ -3,8 +3,9 @@
  */
 
 #include "filesystem.hpp"
+#include "utils.hpp"
 
-#if defined(_WIN32) || defined (_WIN64)
+#ifdef _WIN32
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN
     #endif
@@ -33,36 +34,13 @@ namespace devprompt::filesystem
 
 namespace
 {
-// Windows needs utf8 <=> utf16 conversion functions for api calls
-
-inline std::wstring Utf8ToWide(const std::string& s)
-{
-    if (s.empty()) return std::wstring();
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
-    if (len <= 0) return {};  // conversion failed
-    std::wstring ws(static_cast<size_t>(len), L'\0');
-    ::MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), ws.data(), len);
-    return ws;
-}
-
-inline std::string WideToUtf8(const std::wstring& ws)
-{
-    if (ws.empty()) return std::string();
-    int len = ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()),
-                                    nullptr, 0, nullptr, nullptr);
-    if (len <= 0) return {};  // conversion failed
-    std::string s(static_cast<size_t>(len), '\0');
-    ::WideCharToMultiByte(CP_UTF8, 0, ws.data(), static_cast<int>(ws.size()),
-                          s.data(), len, nullptr, nullptr);
-    return s;
-}
 
 std::string get_home_directory()
 {
     wchar_t buf[MAX_PATH];
     DWORD len = ::GetEnvironmentVariableW(L"USERPROFILE", buf, MAX_PATH);
     if (len > 0 && len < MAX_PATH) {
-        return WideToUtf8(std::wstring(buf, len));
+        return utils::WideToUtf8(std::wstring(buf, len));
     }
     wchar_t drive[MAX_PATH];
     wchar_t hpath[MAX_PATH];
@@ -70,7 +48,7 @@ std::string get_home_directory()
     DWORD plen = ::GetEnvironmentVariableW(L"HOMEPATH", hpath, MAX_PATH);
     if (dlen > 0 && plen > 0)
     {
-        return WideToUtf8(std::wstring(drive, dlen) + std::wstring(hpath, plen));
+        return utils::WideToUtf8(std::wstring(drive, dlen) + std::wstring(hpath, plen));
     }
     return {};  // home not found
 }
@@ -110,7 +88,7 @@ std::string expand_path(const std::string& path, bool resolve_links=false)
     if (path.empty())
         return {};
 
-    std::wstring wpath = Utf8ToWide(path);
+    std::wstring wpath = utils::Utf8ToWide(path);
 
     DWORD needed = ::GetFullPathNameW(wpath.c_str(), 0, nullptr, nullptr);
     if (needed == 0)
@@ -123,7 +101,7 @@ std::string expand_path(const std::string& path, bool resolve_links=false)
     fullPath.resize(written);
 
     if (!resolve_links)
-        return WideToUtf8(fullPath);
+        return utils::WideToUtf8(fullPath);
     
     HANDLE hFile = ::CreateFileW(
         fullPath.c_str(),
@@ -166,7 +144,7 @@ std::string expand_path(const std::string& path, bool resolve_links=false)
         finalPath = finalPath.substr(prefix.size());
     }
 
-    return WideToUtf8(finalPath);    
+    return utils::WideToUtf8(finalPath);    
 }
 
 std::string get_current_directory()
@@ -175,7 +153,7 @@ std::string get_current_directory()
     DWORD len = ::GetCurrentDirectoryW(MAX_PATH, buffer);
     if (len <= 0)
         return {};  // failed
-    return WideToUtf8(buffer);
+    return utils::WideToUtf8(buffer);
 }
 
 //

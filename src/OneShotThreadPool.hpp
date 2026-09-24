@@ -113,6 +113,7 @@ class OneShotThreadPool
     requires std::invocable<F, std::stop_token, CommandContext&>
     void enqueue(F&& f)
     {
+        assert(m_worker_count > 0 && "OneShotThreadPool: enqueue() called with zero worker threads");
         assert(!m_started && "OneShotThreadPool: cannot enqueue() after start() has been called");
         assert(m_task_count < MaxTasks && "OneShotThreadPool: exceeded max task capacity");
         m_tasks[m_task_count] = detail::move_only_task(std::forward<F>(f));

@@ -70,7 +70,7 @@ bool check_ssh()
 } // namespace
 
 
-ModuleUsage OsModule::mod_usage(const Options& /*options*/)
+ModuleUsage OsModule::mod_usage(const Options&, FileScanner&)
 {
     if (!IsVariableInUse(VariableId::os_distro_icon))
         return ModuleUsage::Unused;
@@ -79,7 +79,7 @@ ModuleUsage OsModule::mod_usage(const Options& /*options*/)
 }
 
 /// Load module data
-bool OsModule::mod_load(const Options& options, std::stop_token, CommandContext&)
+bool OsModule::mod_load(const Options& options, const ModuleContext&, std::stop_token, CommandContext&)
 {
 #ifdef _WIN32
     s_distro_icon = " ";

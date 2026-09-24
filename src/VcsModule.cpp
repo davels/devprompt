@@ -80,18 +80,8 @@ vcs::RepoType check_for_repo_at(std::string& repo)
 std::pair<vcs::RepoType, std::string> check_for_repo(const std::string& path)
 {
     std::string repo;
-    if (path.empty())
-    {
-        repo = filesystem::get_current_directory();
-    }
-    else
-    {
-        repo = filesystem::expand_path(path);
-        if (repo.empty())
-            return {vcs::RepoType::none, {}};
-    }
-
-    repo.reserve(repo.length() + MAX_ARTIFACT_LENGTH + 2);
+    repo.reserve(path.length() + MAX_ARTIFACT_LENGTH + 2);
+    repo = path;
     
 #ifdef _WIN32
     // make a windows path look like a unix path
@@ -108,7 +98,7 @@ std::pair<vcs::RepoType, std::string> check_for_repo(const std::string& path)
     // ensure trailing /
     if (repo.back() != '/')  repo += '/';
 
-    // check if this path is under version control, but searching up the directory tree
+    // check if this path is under version control by searching up the directory tree
     vcs::RepoType rtype = vcs::RepoType::none;
     for (;;)
     {
@@ -144,7 +134,7 @@ std::pair<vcs::RepoType, std::string> check_for_repo(const std::string& path)
 } // namespace
 
 
-ModuleUsage VcsModule::mod_usage(const Options& options)
+ModuleUsage VcsModule::mod_usage(const Options& options, FileScanner&)
 {
     if (IsVariableInUse(VariableId::vcs_remote_icon) ||
         IsVariableInUse(VariableId::vcs_branch) ||
@@ -165,7 +155,8 @@ ModuleUsage VcsModule::mod_usage(const Options& options)
 }
 
 /// Load module data
-bool VcsModule::mod_load(const Options& options, std::stop_token /*stoken*/, CommandContext& cmdctx)
+bool VcsModule::mod_load(const Options& options, const ModuleContext& mctx,
+                         std::stop_token, CommandContext& cmdctx)
 {
     s_showcounts = options.Vcs.show_counts;
 
@@ -181,7 +172,7 @@ bool VcsModule::mod_load(const Options& options, std::stop_token /*stoken*/, Com
         return false;
 
     // quickly check if path is under version control
-    auto [rtype, repo] = check_for_repo(options.path);
+    auto [rtype, repo] = check_for_repo(mctx.path());
     
     if (options.Vcs.git && rtype == vcs::RepoType::git)
     {
@@ -232,30 +223,25 @@ void VcsModule::state(std::string& out)
 void VcsModule::wt_icon(std::string& out)
 {
     if (s_status.isworktree)
-        out += " ";  // 󱘎   󰔱 󰐅 󰹩
+        out += " ";  // 󱘎   󰔱 󰐅 󰹩   
 }
 
 void VcsModule::status(std::string& out)
 {
-    std::string flags;
-    auto collector = [&flags, showcount=s_showcounts] (int count, char ch)
+    auto output = [&out, showcount=s_showcounts] (int count, char ch)
     {
         if (count > 0)
         {
-            // if (showcount && !flags.empty())
-            //     flags += ' ';
-            flags += ch;
+            out += ch;
             if (showcount)
-                flags += std::to_string(count);
+                out += std::to_string(count);
         }
     };
-    collector(s_status.conflicts, '!');
-    collector(s_status.unstaged,  '*');
-    collector(s_status.staged,    '+');
-    collector(s_status.untracked, '?');
-    collector(s_status.stashed,   '$');  // 
-
-    out += flags;
+    output(s_status.conflicts, '!');
+    output(s_status.unstaged,  '*');
+    output(s_status.staged,    '+');
+    output(s_status.untracked, '?');
+    output(s_status.stashed,   '$');  // 
 }
 
 void VcsModule::divergence(std::string& out)
