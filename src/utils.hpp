@@ -38,11 +38,11 @@ static constexpr std::array<bool, 256> WHITESPACE = [] {
 
 
 [[nodiscard]]
-inline bool isspace(char ch)
+inline constexpr bool isspace(char ch)
 { return detail::WHITESPACE[static_cast<unsigned char>(ch)]; }
 
 [[nodiscard]]
-inline std::size_t skip_whitespace(std::string_view str, std::size_t pos)
+inline constexpr std::size_t skip_whitespace(std::string_view str, std::size_t pos)
 {
     while (pos < str.size())
     {
@@ -54,7 +54,7 @@ inline std::size_t skip_whitespace(std::string_view str, std::size_t pos)
 }
 
 [[nodiscard]]
-inline std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
+inline constexpr std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
 {
     while (pos < str.size())
     {
@@ -66,21 +66,21 @@ inline std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
 }
 
 /// modify the provided string_view, removing leading whitespace
-inline void ltrim(std::string_view& sv)
+inline constexpr void ltrim(std::string_view& sv)
 {
     while (!sv.empty() && isspace(sv.front()))
         sv.remove_prefix(1);
 }
 
 /// modify the provided string_view, removing trailing whitespace
-inline void rtrim(std::string_view& sv)
+inline constexpr void rtrim(std::string_view& sv)
 {
     while (!sv.empty() && isspace(sv.back()))
         sv.remove_suffix(1);
 }
 
 /// modify the provided string_view, removing leading and trailing whitespace
-inline void trim(std::string_view& sv)
+inline constexpr void trim(std::string_view& sv)
 {
     ltrim(sv);
     rtrim(sv);
@@ -88,7 +88,7 @@ inline void trim(std::string_view& sv)
 
 /// return a string_view of str with leading and trailing whitespace removed
 [[nodiscard]]
-inline std::string_view trimmed(std::string_view sv)
+inline constexpr std::string_view trimmed(std::string_view sv)
 {
     trim(sv);
     return sv;
@@ -123,16 +123,16 @@ inline std::optional<unsigned int> string_to_uint(std::string_view sv)
 
 namespace detail
 {
-inline std::size_t find_separator(std::string_view sv, char sep)
+inline constexpr std::size_t find_separator(std::string_view sv, char sep)
 { return sv.find(sep); }
 
-inline std::size_t find_separator(std::string_view sv, std::string_view sep)
+inline constexpr std::size_t find_separator(std::string_view sv, std::string_view sep)
 { return sv.find(sep); }
 
-inline std::size_t separator_length(char)
+inline constexpr std::size_t separator_length(char)
 { return 1; }
 
-inline std::size_t separator_length(std::string_view sep)
+inline constexpr std::size_t separator_length(std::string_view sep)
 { return sep.size(); }
 } // namespace detail
 
@@ -164,7 +164,7 @@ template <typename Sep>
 class split_view: public std::ranges::view_interface<split_view<Sep>>
 {
   public:
-    split_view(std::string_view input, Sep sep): m_input(input), m_sep(sep) {}
+    constexpr split_view(std::string_view input, Sep sep): m_input(input), m_sep(sep) {}
 
     class iterator
     {
@@ -172,31 +172,31 @@ class split_view: public std::ranges::view_interface<split_view<Sep>>
         using value_type      = std::string_view;
         using difference_type = std::ptrdiff_t;
         
-        iterator() = default; // default-constructed == "end" / finished
+        constexpr iterator() = default; // default-constructed == "end" / finished
 
         // Return by value not const&. We're returning a member local to the iterator.
         // Returning by reference would lead to a dangling reference when used on a
         // temporary iterator.
-        std::string_view operator*() const { return m_current; }
+        constexpr std::string_view operator*() const { return m_current; }
 
         // Pointer to iterator member is fine since, by iterator contract, this is only
         // valid as long as the iterator is valid.
-        const std::string_view* operator->() const { return &m_current; }
+        constexpr const std::string_view* operator->() const { return &m_current; }
 
-        iterator& operator++()
+        constexpr iterator& operator++()
         {
             forward_token();
             return *this;
         }
         
-        iterator operator++(int)
+        constexpr iterator operator++(int)
         {
             iterator tmp = *this;
             forward_token();
             return tmp;
         }
 
-        friend bool operator==(const iterator& a, const iterator& b)
+        friend constexpr bool operator==(const iterator& a, const iterator& b)
         {
             if (a.m_finished != b.m_finished)
                 return false;
@@ -209,12 +209,12 @@ class split_view: public std::ranges::view_interface<split_view<Sep>>
       private:
         friend class split_view;
 
-        iterator(std::string_view sv, Sep sep):
+        constexpr iterator(std::string_view sv, Sep sep):
             m_remaining(sv), m_sep(sep), m_finished(false)
         { forward_token(); }
 
         // advance iterator to the next token
-        void forward_token()
+        constexpr void forward_token()
         {
             if (m_finished)
                 return;
