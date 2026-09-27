@@ -57,40 +57,40 @@ std::string git_host_icon(std::string_view url, const Options& options)
 bool git_status_cmds(RepoStatus& status, const Options& options, const RepoQueryVars& vars, CommandContext& cmdctx)
 {
     CommandArgs<12> args;
-    args.push_back("git");
+    args.push("git");
     if (!options.path.empty())
     {
-        args.push_back("-C");
-        args.push_back(options.path.c_str());
+        args.push("-C");
+        args.push(options.path.c_str());
     }
-    args.push_back("status");
-    args.push_back("--porcelain=2");
-    args.push_back("--branch");
-    args.push_back("--no-renames");
+    args.push("status");
+    args.push("--porcelain=2");
+    args.push("--branch");
+    args.push("--no-renames");
     if (options.Vcs.show_untracked)
-        args.push_back("--untracked-files=normal");
+        args.push("--untracked-files=normal");
     else
-        args.push_back("--untracked-files=no");
+        args.push("--untracked-files=no");
     if (options.Vcs.show_stashed)
-        args.push_back(("--show-stash"));
+        args.push(("--show-stash"));
     // TODO logic needs review
     if (options.Vcs.ignore_submodules)
-        args.push_back("--ignore-submodules=dirty");
+        args.push("--ignore-submodules=dirty");
     // else
-    //     args.push_back(("--ignore-submodules="))
+    //     args.push(("--ignore-submodules="))
     if (!vars.status)
     {
         // this must be the last argument. it will limit git status to this single file
         // and effectively skip file status scanning
-        args.push_back("--");
-        args.push_back(".zdummyz");
+        args.push("--");
+        args.push(".zdummyz");
     }
 
     std::array<char, 50> linebuf;  // only care about the start of the lines
     ShellCommand cmd;
     auto setter = cmdctx.scoped_set(cmd);
     
-    if (!setter || !cmd.start(args.span()))
+    if (!setter || !cmd.start(args.args()))
         return false;
 
     std::string branch_head_hash;

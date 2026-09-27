@@ -14,8 +14,8 @@ struct ShellCommandBase::Impl
 {
     Impl(std::span<char> buf): buffer(buf) {}
     struct subprocess_s subprocess{};
-    std::span<char> buffer;
-    std::span<const char> pending;  // partial data in buffer between readline calls
+    const std::span<char> buffer;  // buffer to hold command output
+    std::span<const char> pending; // partial data in buffer between readline calls
 };
 
 ShellCommandBase::ShellCommandBase(std::span<char> buf):
@@ -101,6 +101,7 @@ bool ShellCommandBase::start_impl(const char* const command_line[])
 {
     subprocess_destroy(&m_impl->subprocess);
 
+    m_impl->pending = {}; // clear any partial state from a previous command
     int res = subprocess_create(command_line,
                                 subprocess_option_inherit_environment
                                 | subprocess_option_search_user_path

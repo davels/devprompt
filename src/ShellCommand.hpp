@@ -34,11 +34,11 @@ class ShellCommandBase
     ShellCommandBase(ShellCommandBase&&) = delete;
     ShellCommandBase& operator=(ShellCommandBase&&) = delete;
 
-    // maximum number of argument allowed for start,run methods that take a span<>
+    // maximum number of arguments allowed for start and run methods that take a span<>
     static constexpr std::size_t MaxArguments = 16;
     static constexpr int ERR_BUFFER_OVERFLOW = 99999;
     
-    /// start the command with the given args
+    /// start a command with the given args. follow with read/readline
     template <typename... Args>
       requires (NullTerminatedString<Args>&& ...)
     bool start(Args... args)
@@ -116,7 +116,7 @@ class ShellCommandBase
             return value;
     }
     
-    // _impl command_line arg requires a final NULL in the array
+    // x_impl command_line arg requires a final NULL in the array
     bool start_impl(const char* const command_line[]);
     std::size_t read_into(std::span<char> buffer);
     Expected<std::string_view,int> run_impl(const char* const command_line[]);
@@ -140,7 +140,7 @@ template <std::size_t N>
 class CommandArgs
 {
 public:
-    constexpr bool push_back(const char* arg)
+    constexpr bool push(const char* arg)
     {
         if (m_size == N)
             return false;
@@ -149,15 +149,11 @@ public:
         return true;
     }
 
-    constexpr std::span<const char* const> span() const
-    {
-        return {m_args.data(), m_size};
-    }
+    constexpr std::span<const char* const> args() const
+    { return {m_args.data(), m_size}; }
 
     constexpr std::size_t size() const
-    {
-        return m_size;
-    }
+    { return m_size; }
 
 private:
     std::array<const char*, N> m_args{};

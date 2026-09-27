@@ -132,13 +132,13 @@ TEST_CASE("start(span) accepts an argument list exactly at MaxArguments",
           "[ShellCommand][start][MaxArguments]")
 {
     CommandArgs<ShellCommandBase::MaxArguments> args;
-    REQUIRE(args.push_back("echo"));
+    REQUIRE(args.push("echo"));
     for (std::size_t i = 0; i < ShellCommandBase::MaxArguments - 1; ++i)
-        REQUIRE(args.push_back("x"));
+        REQUIRE(args.push("x"));
     CHECK(args.size() == ShellCommandBase::MaxArguments);
 
     ShellCommand sc;
-    REQUIRE(sc.start(args.span()));
+    REQUIRE(sc.start(args.args()));
     CHECK(sc.wait() == 0);
 }
 
@@ -434,10 +434,10 @@ TEST_CASE("CommandArgs push_back succeeds up to capacity and fails beyond it",
 {
     CommandArgs<2> args;
     CHECK(args.size() == 0);
-    CHECK(args.push_back("one"));
-    CHECK(args.push_back("two"));
+    CHECK(args.push("one"));
+    CHECK(args.push("two"));
     CHECK(args.size() == 2);
-    CHECK_FALSE(args.push_back("three")); // capacity exceeded
+    CHECK_FALSE(args.push("three")); // capacity exceeded
     CHECK(args.size() == 2);              // unchanged by the failed push
 }
 
@@ -445,9 +445,9 @@ TEST_CASE("CommandArgs::span() reflects exactly the elements pushed so far",
           "[CommandArgs]")
 {
     CommandArgs<4> args;
-    args.push_back("a");
-    args.push_back("b");
-    auto s = args.span();
+    args.push("a");
+    args.push("b");
+    auto s = args.args();
     REQUIRE(s.size() == 2);
     CHECK(std::string_view(s[0]) == "a");
     CHECK(std::string_view(s[1]) == "b");
