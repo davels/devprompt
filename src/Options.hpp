@@ -33,6 +33,8 @@ struct Options
     unsigned int timeout{0};
     unsigned int module_timeout{0};
 
+    enum class PythonVersionMode { Venv, Files, Context };
+    
     struct
     {    
         // repo types to scan
@@ -61,6 +63,12 @@ struct Options
         bool show_ssh = true;        // show ssh tag on distro when ssh'd
     } Os;
 
+    struct
+    {
+        std::string binary;
+        PythonVersionMode vmode = PythonVersionMode::Venv;
+    } Python;
+    
     struct
     {
         std::string error;

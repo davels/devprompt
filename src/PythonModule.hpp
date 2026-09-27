@@ -1,5 +1,5 @@
 /**
- * @file VenvModule.hpp
+ * @file PythonModule.hpp
  */
 
 #pragma once
@@ -16,14 +16,15 @@ class FileScanner;
 class ModuleContext;
 class CommandContext;
 
-struct VenvModule
+struct PythonModule
 {
-    static constexpr std::string_view mod_name = "VenvModule";
+    static constexpr std::string_view mod_name = "PythonModule";
     static ModuleUsage mod_usage(const Options& options, FileScanner& fscanner);
     static bool mod_load(const Options& options, const ModuleContext&,
                          std::stop_token stoken, CommandContext& cmdctx);
     
-    static void name(std::string& out);
+    static void venv(std::string& out);
+    static void version(std::string& out);
 };
 
 } // namespace devprompt

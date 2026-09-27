@@ -4,17 +4,23 @@
 
 #pragma once
 
-#include <cstddef>
 #include <array>
 #include <memory>
 #include <span>
 #include <optional>
 #include <string_view>
+#include <concepts>
 #include <cstddef>
 #include "Expected.hpp"
 
 namespace devprompt
 {
+
+template <typename T>
+concept NullTerminatedString =
+    std::is_convertible_v<T, const char*> ||
+    std::same_as<std::remove_cvref_t<T>, std::string>;
+
 
 class ShellCommandBase
 {
@@ -34,9 +40,10 @@ class ShellCommandBase
     
     /// start the command with the given args
     template <typename... Args>
+      requires (NullTerminatedString<Args>&& ...)
     bool start(Args... args)
     {
-        const char* command_line[] = {args..., nullptr};
+        const char* command_line[] = {to_c_str(args)..., nullptr};
         return start_impl(command_line);
     }
 
@@ -67,13 +74,14 @@ class ShellCommandBase
 
     /// kill the process
     void kill();
-    
+
     /// run the command, read stdout (upto buffer size) and return it as a string_view.
     /// return exit code on error
     template <typename... Args>
+      requires (NullTerminatedString<Args>&& ...)
     Expected<std::string_view,int> run(Args... args)
     {
-        const char* command_line[] = {args..., nullptr};
+        const char* command_line[] = {to_c_str(args)..., nullptr};
         return run_impl(command_line);
     }
 
@@ -91,7 +99,7 @@ class ShellCommandBase
         
         return run_impl(command_line.data());
     }
-
+    
   protected:
     explicit ShellCommandBase(std::span<char> buf);
     
@@ -99,6 +107,15 @@ class ShellCommandBase
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 
+    template <typename T>
+    static const char* to_c_str(T&& value)
+    {
+        if constexpr (std::same_as<std::remove_cvref_t<T>, std::string>)
+            return value.c_str();
+        else
+            return value;
+    }
+    
     // _impl command_line arg requires a final NULL in the array
     bool start_impl(const char* const command_line[]);
     std::size_t read_into(std::span<char> buffer);

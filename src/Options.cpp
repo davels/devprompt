@@ -146,6 +146,26 @@ Expected<Options, std::string> parse_options(int argc,  char** argv)
         {
             options.Os.wsl_is_distro = false;
         }
+        else if (arg == "--python-binary")
+        {
+            if (!parser.more())
+                return Unexpected("Missing binary list for --python-binary");
+            options.Python.binary = *parser.next();
+        }
+        else if (arg == "--python-version")
+        {
+            if (!parser.more())
+                return Unexpected("Missing mode for --python-version");
+            auto mode = *parser.next();
+            if (mode == "venv")
+                options.Python.vmode = Options::PythonVersionMode::Venv;
+            else if (mode == "files")
+                options.Python.vmode = Options::PythonVersionMode::Files;
+            else if (mode == "context")
+                options.Python.vmode = Options::PythonVersionMode::Context;
+            else
+                return Unexpected("Invalid value for --python-version. Should be one of [venv, files, context]");
+        }
         else if (arg == "--shell-error")
         {
             if (!parser.more())

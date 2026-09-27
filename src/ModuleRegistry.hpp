@@ -25,7 +25,7 @@ class CommandContext;
 /// list of all Modules
 using Modules = std::tuple<
     VcsModule,
-    VenvModule,
+    PythonModule,
     SysModule,
     PathModule,
     OsModule,

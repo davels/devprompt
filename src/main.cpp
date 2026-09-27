@@ -67,13 +67,20 @@ Options:
           If there is no branch name, use commit id as the branch name [default]
   --vcs-no-commit-as-branch
           Don't substitute commit id for missing branch name
-  --vcs-remote-pattern <pattern;icon>
+  --vcs-remote-pattern <pattern;icon;...>
           Add a new remote icon mapping. Requires a string to compare to the remote url,
           and an icon.
   --os-wsl-is-distro
           Treat WSL as it's own distro instead of reporting the specific distro used
   --os-no-wsl-is-distro
           For WSL, report the linux distro [default]
+  --python-binary <command1;command2;...>
+          python binaries executed to get the python version
+  --python-version <mode>
+          When should the python version be collected
+            venv    : a virtual environment is active  [default]
+            files   : the directory contains a "python" file
+            context : either of the above is true
   --timings
           Show execution time
   --no-async

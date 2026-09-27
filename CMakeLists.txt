@@ -153,7 +153,7 @@ add_library(devprompt_lib
   src/FormatString.cpp
   src/Variable.cpp
   src/VcsModule.cpp
-  src/VenvModule.cpp
+  src/PythonModule.cpp
   src/SysModule.cpp
   src/PathModule.cpp
   src/OsModule.cpp
@@ -227,6 +227,7 @@ add_executable(devprompt_tests
   tests/FormatString.cpp
   tests/styleparser.cpp
   tests/utils.cpp
+  tests/utils_split_view.cpp
   tests/OneShotThreadPool.cpp
 )
 

@@ -42,13 +42,13 @@ std::string work_path(const Options& options)
     return filesystem::expand_path(options.path);
 }
 
-void load_modules(const Options& options)
+Expected<void, std::string> load_modules(const Options& options)
 {
     FileScanner fscanner;
     ModuleContext mctx{work_path(options), fscanner};
 
     if (mctx.path().empty())
-        return;  // path is not valid
+        return Unexpected("Invalid path");  // path is not valid
     
     //
     // check each module for usage
@@ -123,10 +123,10 @@ void load_modules(const Options& options)
     }
 
     // even if we're not using worker threads, we still run the thread pool (with zero
-    // worker threads) for the timeout watchdog
+    // worker threads) for the timeout watchdog, and potential file scanner task
     tpool.start();
     
-    // - run the remaining loads synchronously
+    // - run the remaining module loads synchronously
     for (auto& mod: s_modules)
     {
         if (mod.usage == ModuleUsage::Unused || mod.async) continue;
@@ -145,10 +145,13 @@ void load_modules(const Options& options)
     // update Core variable
     if (tpool.global_timeout_reached())
         Core::set_timeout_reached();
-    
+
+    // record load statistics
     s_filescanner_elapsed = fscanner.elapsed();
     s_poolsize = poolsize;
     s_global_timeout_triggered = tpool.global_timeout_reached();
+
+    return {};
 }
 
 } // namespace
@@ -169,8 +172,7 @@ Expected<void,std::string> run(Options& options)
 
     {
         // parse the format string which also tags used variables
-        auto result = format.compile();
-        if (!result)
+        if (auto result = format.compile(); !result)
             return result;
 
         // expand any specified palette
@@ -187,7 +189,8 @@ Expected<void,std::string> run(Options& options)
     }
     
     // load module data
-    load_modules(options);
+    if (auto result = load_modules(options); !result)
+        return result;
     
     // expand the format string and write it out
     std::string out;

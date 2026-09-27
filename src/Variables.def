@@ -17,9 +17,10 @@ VARIABLE(vcs, wt_icon,     VcsModule::wt_icon)
 VARIABLE(vcs, status,      VcsModule::status)
 VARIABLE(vcs, divergence,  VcsModule::divergence)
 
-// VENV Module
+// PYTHON Module
 
-VARIABLE(venv, name, VenvModule::name)
+VARIABLE(python, venv, PythonModule::venv)
+VARIABLE(python, version, PythonModule::version)
 
 // SYSTEM Module
 
