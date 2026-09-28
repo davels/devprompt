@@ -50,7 +50,7 @@ class FileScanner
         bool found = false;
     };
     std::vector<Pattern> m_patterns;
-    std::chrono::steady_clock::duration m_elapsed;
+    std::chrono::steady_clock::duration m_elapsed{};
     
     void track_filename(std::string_view fname);
 }; // FileScanner

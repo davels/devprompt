@@ -30,7 +30,7 @@ namespace
 
 bool s_timing_on = false;
 // run statistics
-std::chrono::steady_clock::duration s_filescanner_elapsed;
+std::chrono::steady_clock::duration s_filescanner_elapsed{};
 unsigned int s_poolsize = 0;
 bool s_global_timeout_triggered = false;
 
@@ -160,7 +160,8 @@ Expected<void, std::string> load_modules(const Options& options)
 Expected<void,std::string> run(Options& options)
 {
     std::chrono::steady_clock::time_point start_time_run;
-    std::chrono::steady_clock::duration parse_elapsed, expand_elapsed;
+    std::chrono::steady_clock::duration parse_elapsed{};
+    std::chrono::steady_clock::duration expand_elapsed{};
     s_timing_on = options.show_timings;
 
     if (s_timing_on)
