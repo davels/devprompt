@@ -142,8 +142,9 @@ inline constexpr std::size_t separator_length(std::string_view sep)
  * Constructor take a string_view source and a separator (char or string_view).
  * Returned tokens are string_view objects from the soruce.
  * 
- * This operates on string_view objects so the source must be valid for the entire
- * lifetime of this object and any iterators.
+ * This operates on string_view objects so the source must live for the entire lifetime of
+ * this object and any iterators.
+ * * do not construct a split_view from a temporary std::string *
  *
  * This is fine as long as some_string outlives the range:
  * auto range = split_view{some_string, ','};
@@ -154,9 +155,11 @@ inline constexpr std::size_t separator_length(std::string_view sep)
  * This is also bad for the same reason:
  * auto range = split_view(func_returning_string(), ',');
  *
- * But this is fine, since the return value lives until the end of the expression:
+ * Also invalid before c++23
  * for (auto token: split_view{func_returning_string(), ','})
  * {   // ...  }
+ * // NOTE: c++23 will extended the lifetime of the return value until the end of the
+ * // loop, but c++20 does not.
  * 
  */
 template <typename Sep>
