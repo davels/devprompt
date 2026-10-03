@@ -121,6 +121,78 @@ TEST_CASE("trimmed works with string", "[utils][whitespace]")
     CHECK(result == "hello world");
 }
 
+TEST_CASE("ltrim modifies string_view", "[utils][whitespace]")
+{
+    std::string_view str = "  hello world  ";
+
+    ltrim(str);
+
+    CHECK(str == "hello world  ");
+}
+
+TEST_CASE("ltrim with no changes", "[utils][whitespace]")
+{
+    std::string_view str = "hello world  ";
+
+    ltrim(str);
+
+    CHECK(str == "hello world  ");
+}
+
+TEST_CASE("ltrim with empty string_view", "[utils][whitespace]")
+{
+    std::string_view str = "";
+
+    ltrim(str);
+
+    CHECK(str == "");
+}
+
+TEST_CASE("ltrim with empty string_view 2", "[utils][whitespace]")
+{
+    std::string_view str{};
+
+    ltrim(str);
+
+    CHECK(str == "");
+}
+
+TEST_CASE("rtrim modifies string_view", "[utils][whitespace]")
+{
+    std::string_view str = "  hello world  ";
+
+    rtrim(str);
+
+    CHECK(str == "  hello world");
+}
+
+TEST_CASE("rtrim with no changes", "[utils][whitespace]")
+{
+    std::string_view str = "  hello world";
+
+    rtrim(str);
+
+    CHECK(str == "  hello world");
+}
+
+TEST_CASE("rtrim with empty string_view", "[utils][whitespace]")
+{
+    std::string_view str = "";
+
+    rtrim(str);
+
+    CHECK(str == "");
+}
+
+TEST_CASE("rtrim with empty string_view 2", "[utils][whitespace]")
+{
+    std::string_view str{};
+
+    rtrim(str);
+
+    CHECK(str == "");
+}
+
 TEST_CASE("trim modifies string_view", "[utils][whitespace]")
 {
     std::string_view str = "  hello world  ";
