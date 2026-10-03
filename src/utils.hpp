@@ -28,7 +28,7 @@ namespace devprompt::utils
 
 namespace detail
 {
-static constexpr std::array<bool, 256> WHITESPACE = [] {
+inline constexpr std::array<bool, 256> WHITESPACE = [] {
     std::array<bool, 256> table{};
     for (unsigned char c : {' ', '\t', '\n', '\r', '\f', '\v'})
         table[c] = true;
