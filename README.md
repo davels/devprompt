@@ -1,72 +1,100 @@
 # devprompt
 
-A fast, customizable shell prompt generator.
+A fast, lightweight, and customizable shell prompt generator with flexible formatting and Git integration.
 
 ## Features
 
-- Simple configuration: command-line arguments and environment variables
-- Customizable: choose colors and features with precise control over the layout
-- No Dependencies: single binary
+- **Simple configuration:** Configure using command-line options or environment variables.
+- **Customizable:** Control colors, formatting, and which prompt elements are displayed.
+- **Lightweight:** A single, standalone binary with no runtime dependencies.
 
 ## Prerequisites
 
-- A [Nerd Font](https://www.nerdfonts.com/) installed and enabled in your terminal
+- A [Nerd Font](https://www.nerdfonts.com/) installed and enabled in your terminal is recommended for displaying icons.
 
-## Install
+## Shell Integration
 
-### Add to your shell
+Add the following to your `~/.bashrc`:
 
-**Bash** `~/.bashrc`:
+**Simple prompt**
 ```bash
-# simple prompt
 PS1='$(devprompt --shell bash --format "{fg:cyan}%path.path%[ {fg:red}%vcs.status%] {fg:green}> ")'
-
-# more complex with conditional elements
-PS1='$(devprompt --format "{fg:green}%sys.user%@%sys.host%[{/} on {fg:magenta}%vcs.branch%[ {fg:red}\[%vcs.status%\]]]{/} at {fg:blue}%path.path%\n{fg:green bold}>{/} ")'
 ```
 
-The format string can be specified with the `--format` option or with the `DEVPROMPT_FORMAT` environment variable.  If both are specified, the command line argument will take precedence.
+**More complex prompt with conditional elements**
+```bash
+PS1='$(devprompt --shell bash --format "{fg:green}%sys.user%@%sys.host%[{/} on {fg:magenta}%vcs.branch%[ {fg:red}\[%vcs.status%\]]]{/} at {fg:blue}%path.path%\n{fg:green bold}>{/} ")'
+```
 
+The format string can be specified using the `--format` command-line option or the `DEVPROMPT_FORMAT` environment variable. If both are specified, the command-line option takes precedence.
 
 ## Format Syntax
 
-A format string consists of text, {styles}, [conditional blocks], and %module.variables%.
+A format string consists of literal text, styles, conditional blocks, and module variables.
 
 ### Escaping Text
 
-Proceed special charaters with a backslash `\` to output them verbatim.
+Precede special characters with a backslash (`\`) to output them literally.
 
-- `\{` → `{`
-- `\}` → `}`
-- `\[` → `[`
-- `\]` → `]`
-- `\%` → `%`
-- `\n` → newline
-- `\t` → tab
-- `\\` → `\` (literal backslash)
+| Escape | Output |
+| :--- | :--- |
+| `\{` | `{` |
+| `\}` | `}` |
+| `\[` | `[` |
+| `\]` | `]` |
+| `\%` | `%` |
+| `\n` | Newline |
+| `\t` | Tab |
+| `\\` | `\` (literal backslash) |
 
-### Style
+### Styles
 
-A style consists of one or more of: foregroud color, background color, and options, surrounded by braces `{ }`. Extra whitespace is ignored.
-- foreground color: `fg:COLOR`
-- background color: `bg:COLOR`
-- options: `bold` , `italic` , `underline`
+Styles are specified inside braces (`{ }`) and can contain one or more of the following:
 
-A slash is used to reset all styles to the shell default: `{/}`
+- Foreground color: `fg:COLOR`
+- Background color: `bg:COLOR`
+- Modifiers: `bold`, `italic`, `underline`, `strikethrough`
 
-COLOR is either:
-- a named shell color: black, red, green, yellow, blue, magenta, cyan, white, bright-black, bright-red, bright-green, bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white
-- a hex color: `#999999`
+Extra whitespace inside the braces is ignored.
 
-Examples
+Use `{/}` to reset all styles to the shell default.
+
+`COLOR` can be either a named color or a hexadecimal color code.
+
+**Named colors:**
+
+`black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `bright-black`, `bright-red`, `bright-green`, `bright-yellow`, `bright-blue`, `bright-magenta`, `bright-cyan`, `bright-white`
+
+**Hexadecimal colors:**
+
+`#hexcode`
+
+**Examples**
+
+| Style | Effect |
+| :--- | :--- |
 | `{fg:red}` | red foreground |
-| `{fg:blue bg:yellow bold}` | blue foregroud, yellow background, bold text |
-| `{/}` | reset colors to shell default |
+| `{fg:#1111FF bg:yellow bold}` | blue foreground, yellow background, bold text |
+| `{/}` | Reset styles to the shell default |
 
-### Conditional block
+### Conditional Blocks
 
-Anything surrounded by brackets `[  ]` will only be writtin out if at least one contained variable outputs a value.
+Anything enclosed in square brackets (`[ ]`) is treated as a conditional block.
 
-### Module Variable
+A conditional block is only included in the output if at least one variable inside the block produces a non-empty value. Otherwise, the entire block is omitted.
 
-Modules values are accessed through variables. `%MODULE.VARIABLE_NAME%`
+### Module Variables
+
+Module variables are used to include dynamic information in the prompt.
+
+Variables follow the format:
+
+`%MODULE.VARIABLE_NAME%`
+
+For example:
+
+- `%sys.user%`
+- `%sys.host%`
+- `%vcs.branch%`
+- `%path.path%`
+- `%vcs.status%`
