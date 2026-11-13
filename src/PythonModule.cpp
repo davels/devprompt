@@ -137,7 +137,11 @@ bool PythonModule::mod_load(const Options& options, const ModuleContext& mctx, s
         has_venv = lookup_venv(!var_venv);
     }
 
-    // NOTE: FileScanner access can block so do this as late as possible
+    // Lookup the version if any of the following is true:
+    //   1. mode is Venv and virtual env is active
+    //   2. mode is Files and file scanner finds any *.py files
+    //   3. mode is Context and (virtual env is active OR file scanner file any *.py files)
+    // NOTE: FileScanner access blocks until scan is done, so do this as late as possible
     if (var_version &&
         ((options.Python.vmode == Options::PythonVersionMode::Venv && has_venv)
          ||

@@ -136,7 +136,8 @@ Expected<void,std::string> FormatString::compile()
     int cond_depth = 0;
     PendingString textnode;  // in progress text node
     Cursor cur{m_format};
-
+    m_tokens.reserve(32);  // avoid multiple allocations for typical format strings
+    
     while (char ch = cur.next())
     {
         // plain text

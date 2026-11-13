@@ -1,5 +1,7 @@
 /**
  * @file IterCursor.hpp
+ *
+ * A cursor style interface over any iterable container.
  */
 
 #pragma once

@@ -41,6 +41,7 @@ inline constexpr std::array<bool, 256> WHITESPACE = [] {
 inline constexpr bool isspace(char ch)
 { return detail::WHITESPACE[static_cast<unsigned char>(ch)]; }
 
+/// position of first non-whitespace char in str, otherwise npos
 [[nodiscard]]
 inline constexpr std::size_t skip_whitespace(std::string_view str, std::size_t pos)
 {
@@ -53,6 +54,7 @@ inline constexpr std::size_t skip_whitespace(std::string_view str, std::size_t p
     return std::string_view::npos;
 }
 
+/// position of first whitespace char in str, otherwise npos
 [[nodiscard]]
 inline constexpr std::size_t find_first_whitespace(std::string_view str, std::size_t pos)
 {
@@ -139,7 +141,7 @@ inline constexpr std::size_t separator_length(std::string_view sep)
 /**
  * forward-iterable range that yields tokens from a string split by a separator.
  *
- * Constructor take a string_view source and a separator (char or string_view).
+ * Constructor takes a string_view source and a separator (char or string_view).
  * Returned tokens are string_view objects from the soruce.
  * 
  * This operates on string_view objects so the source must live for the entire lifetime of

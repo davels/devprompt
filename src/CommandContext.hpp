@@ -1,5 +1,10 @@
 /**
  * @file CommandContext.hpp
+ *
+ * Holds a reference to a ShellCommand. Context methods (set,clear,kill) are all thread
+ * safe.
+ *
+ * Use scoped_set(command) for automatic RAII set/clear
  */
 
 #pragma once

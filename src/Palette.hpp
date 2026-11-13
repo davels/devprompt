@@ -1,5 +1,7 @@
 /**
  * @file Palette.hpp
+ *
+ * A Palette is a table of named styles
  */
 
 #pragma once

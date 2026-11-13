@@ -5,13 +5,10 @@
  *
  * - Tasks are all queued up front into a fixed size array before the schedular starts, no
  *   locking required.
- * - Workers claim tasks with a single atomic fetch_add over the array. No mutex, no
- *   condition_variable
- * - wait_all() uses std::atomic<size_t>::wait()/notify_all() rather than a mutex +
- *   condition_variable.
+ * - Workers claim tasks with a single atomic fetch_add over the array
  *
- * watchdog thread (when enabled) uses the only mutex to monitor tasks that take too long
- * and sends a stop request to them via std::stop_token
+ * watchdog thread (when enabled) monitors tasks that take too long and sends a stop
+ * request to them via std::stop_token
  *
  * move_only_task acts as a standin for std::move_only_function until we move to C++23
  *
@@ -93,7 +90,7 @@ template <std::size_t MaxTasks>
 class OneShotThreadPool
 {
   public:
-    // duration == 0 disables the watchdog entirely.
+    // both durations == 0 disables the watchdog entirely.
     explicit OneShotThreadPool(std::size_t numThreads,
                                std::chrono::milliseconds max_task = std::chrono::milliseconds{0},
                                std::chrono::milliseconds max_total = std::chrono::milliseconds{0}):
