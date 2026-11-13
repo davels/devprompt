@@ -221,14 +221,14 @@ include(Catch)
 
 add_executable(devprompt_tests
   tests/Expected.cpp
-  #  tests/formatter.cpp
-  tests/Style.cpp
-  tests/ShellCommand.cpp
   tests/FormatString.cpp
+  tests/OneShotThreadPool.cpp
+  tests/ShellCommand.cpp
+  tests/Style.cpp
+  tests/jsonparser.cpp
   tests/styleparser.cpp
   tests/utils.cpp
   tests/utils_split_view.cpp
-  tests/OneShotThreadPool.cpp
 )
 
 target_link_libraries(devprompt_tests PRIVATE
